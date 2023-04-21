@@ -15,6 +15,7 @@ OBJECTS = $(SRC_FILES:.cpp=.o)
 ifeq ($(shell echo "Windows"), "Windows")
 	TARGET := $(TARGET).exe
 	DEL = del
+	CFLAGS += -DWINDOWS
 else
 	DEL = rm
 endif
