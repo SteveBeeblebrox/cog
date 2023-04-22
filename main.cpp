@@ -164,7 +164,7 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG = get_confi
 	int cppVersion = 11;
 	string cppBin = "", cppWarnings = "";
 	bool cppStrict = false;
-	#pragma GCC warn move config reading into a pbr function, color output, have run use stderr to not clutter stdout, external deps??, --release uses make -B
+	#pragma GCC warn move config reading into a pbr function, color output, have run use stderr to not clutter stdout, external deps??, --release uses make -B, os detection, pkg config lookup
 
 	string dependencyRules = "", srcFiles = "";
 
