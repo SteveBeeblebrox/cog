@@ -164,7 +164,7 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG = get_confi
 	int cppVersion = 11;
 	string cppBin = "", cppWarnings = "";
 	bool cppStrict = false;
-	#pragma GCC warn move config reading into a pbr function
+	#pragma GCC warn move config reading into a pbr function, color output, have run use stderr to not clutter stdout, external deps??, --release uses make -B
 
 	string dependencyRules = "", srcFiles = "";
 
@@ -196,15 +196,15 @@ endif
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CXX) -o $@ $^
+	@$(CXX) -o $@ $^
 
 build/%.o: src/%.cpp
-	$(CXX) $(CFLAGS) -o $@ -c $<
+	@$(CXX) $(CFLAGS) -o $@ -c $<
 
 # DEPENDENCIES
 )""" + dependencyRules);
 
-	const auto MAKE_RESULT = commands::run("make -f build/makefile");
+	const auto MAKE_RESULT = commands::run("make --makefile=build/makefile --silent");
 	if(MAKE_RESULT != 0) {
 		throw runtime_error("Error running make");
 	}
