@@ -56,7 +56,7 @@ project.author=You!;
 
 	files::mkdir(NAME + "/src");
 	files::fwrite(NAME + "/src/main.cpp",
-R"""(#include<iostream>
+R"""(#include <iostream>
 using namespace std;
 
 int main() {
