@@ -8,7 +8,7 @@ namespace commands {
         std::string output;
         int status;
     };
-    int run(const char* command,  const std::vector<std::string> ARGS = std::vector<std::string>());
-    CommandResult run_and_read(const char* command, const std::vector<std::string> ARGS = std::vector<std::string>());
+    int run(const std::string COMMAND,  const std::vector<std::string> ARGS = std::vector<std::string>());
+    CommandResult run_and_read(const std::string COMMAND, const std::vector<std::string> ARGS = std::vector<std::string>());
 }
 #endif

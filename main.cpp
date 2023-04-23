@@ -13,6 +13,9 @@
 #include "files.h"
 #include "console.hpp"
 #include "commands.h"
+#include "formatting.h"
+
+#include "third_party/matchOS.h"
 
 using namespace std;
 using namespace console;
@@ -36,7 +39,7 @@ project.author=You!;
 
 # Compilation Settings;
 cpp.version=11;
-cpp.warnings=all;
+cpp.strict=false;
 )""", NAME.c_str()));
 
 	files::mkdir(NAME + "/src");
@@ -51,7 +54,7 @@ int main() {
 )""");
 }
 
-/// @brief For the C++ source file at FILE
+/// @brief For the C++ source file at FILE, recursively get all dependencies for make to watch timestamps
 string get_make_dependencies(const fs::path FILE) {
 	string line;
 	string rule = FILE.stem().string() + ".o: " + FILE.string();
@@ -65,7 +68,7 @@ string get_make_dependencies(const fs::path FILE) {
 
 		ifstream file(NEXT);
 		if(file.fail()) {
-			eprintlnf("Could not access file %s", NEXT.string().c_str());
+			eprintlnf("%sCould not access file %s%s", formatting::colors::fg::YELLOW, NEXT.string().c_str(), formatting::colors::fg::REVERT);
 			continue;
 		}
 
@@ -129,45 +132,133 @@ string escape_quotes(const string ARG) {
 	return configstring::stringlib::str_replace(ARG,"\"","\\\"");
 }
 
+/// @brief If KEY exists, get KEY from CONFIG as a string or throw an error
+void get_string_from_config(const configstring::ConfigObject &CONFIG, const string KEY, string &outValue) {
+	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::String>()) {
+		outValue = VALUE->getValue();
+	}  else {
+		throw runtime_error(KEY + " is not a string");
+	}
+}
+
+/// @brief Get KEY from CONFIG as a string or throw an error
+void get_optional_string_from_config(const configstring::ConfigObject &CONFIG, const string KEY, string &outValue) {
+	if(CONFIG.has(KEY)) {
+		get_string_from_config(CONFIG, KEY, outValue);
+	}
+}
+
+/// @brief Get KEY from CONFIG as a bool or throw an error
+void get_bool_from_config(const configstring::ConfigObject &CONFIG, const string KEY, bool &outValue) {
+	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Boolean>()) {
+		outValue = VALUE->getValue();
+	}  else {
+		throw runtime_error(KEY + " is not a boolean");
+	}
+}
+
+/// @brief If KEY exists, get KEY from CONFIG as a bool or throw an error
+void get_optional_bool_from_config(const configstring::ConfigObject &CONFIG, const string KEY, bool &outValue) {
+	if(CONFIG.has(KEY)) {
+		get_bool_from_config(CONFIG, KEY, outValue);
+	}
+}
+
+/// @brief Get KEY from CONFIG as a double or throw an error
+void get_double_from_config(const configstring::ConfigObject &CONFIG, const string KEY, double &outValue) {
+	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Number>()) {
+		outValue = VALUE->getValue();
+	}  else {
+		throw runtime_error(KEY + " is not a number");
+	}
+}
+
+/// @brief If KEY exists, get KEY from CONFIG as a double or throw an error
+void get_optional_double_from_config(const configstring::ConfigObject &CONFIG, const string KEY, double &outValue) {
+	if(CONFIG.has(KEY)) {
+		get_double_from_config(CONFIG, KEY, outValue);
+	}
+}
+
+/// @brief If KEY exists, get KEY from CONFIG as a version number
+/// (Note that 1 or 1.0 would be interpreted as a number while 1.0.0 is a string, this grabs either)
+void get_optional_version_from_config(const configstring::ConfigObject &CONFIG, const string KEY, string &outValue) {
+	if(CONFIG.has(KEY)) {
+		if(const auto VALUE = CONFIG.get(KEY)->as<configstring::String>()) {
+			outValue = VALUE->getValue();
+		} else if(const auto value = CONFIG.get(KEY)->as<configstring::Number>()) {
+			outValue = format("%.1f",value->getValue());
+		} else {
+			throw runtime_error(KEY + " is not a string or number");
+		}
+	}
+}
+
+/// @brief Check that command COMMAND can be run by checking that COMMAND --version exists with code 0
+void assert_command_exists(const string COMMAND, const string WHICH_KEY, const string ARG = "--version") {
+	if(commands::run_and_read(COMMAND, vector<string> {ARG}).status != 0) {
+		throw runtime_error(format("Command \"%s\" does not exist. Either set which.%s in project.cfg or install %s", COMMAND.c_str(), WHICH_KEY.c_str(), COMMAND.c_str()));
+	}
+}
+
+struct Pkg {
+	string name;
+	string relation = "=";
+	string version = "*";
+};
+
 /// @brief Build the project from the given config settings and set debug mode (defines the DEBUG macro for the project if true)
 void build(const bool DEBUG, const configstring::ConfigObject CONFIG = get_config()) {
 	files::mkdir("build");
 	
 	// version and author can be omitted while name is required
 	string projectName, projectVersion = "1.0", projectAuthor = "anonymous";
-
-	if(const auto VALUE = CONFIG.get("project.name")->as<configstring::String>()) {
-		projectName = VALUE->getValue();
-	} else {
-		throw runtime_error("project.name is not a string");
-	}
-
-	if(CONFIG.has("project.version")) {
-		if(const auto VALUE = CONFIG.get("project.version")->as<configstring::String>()) {
-			projectVersion = VALUE->getValue();
-		} else if(const auto value = CONFIG.get("project.version")->as<configstring::Number>()) {
-			projectVersion = format("%.1f",value->getValue());
-		} else {
-			throw runtime_error("project.version is not a string or number");
-		}
-	}
-
-	if(CONFIG.has("project.author")) {
-		if(const auto VALUE = CONFIG.get("project.author")->as<configstring::String>()) {
-			projectAuthor = VALUE->getValue();
-		}  else {
-			throw runtime_error("project.author is not a string");
-		}
-	}
+	get_string_from_config(CONFIG, "project.name", projectName);
+	get_optional_version_from_config(CONFIG, "project.version", projectVersion);
+	get_optional_string_from_config(CONFIG, "project.author", projectAuthor);
 
 	// All can be omitted
-	int cppVersion = 11;
-	string cppBin = "", cppWarnings = "";
+	string whichCPP = "g++", whichMake = "make", whichPkgConfig = "pkg-config";
+	get_optional_string_from_config(CONFIG, "which.cpp", whichCPP);
+	get_optional_string_from_config(CONFIG, "which.make", whichMake);
+	get_optional_string_from_config(CONFIG, "which.pkg-config", whichPkgConfig);
+
+
+	assert_command_exists(whichCPP, "cpp");
+	assert_command_exists(whichMake, "make");
+
 	bool cppStrict = false;
-	#pragma GCC warn move config reading into a pbr function, color output, have run use stderr to not clutter stdout, external deps??, --release uses make -B, os detection, pkg config lookup
+	get_optional_bool_from_config(CONFIG, "cpp.strict", cppStrict);
+
+	double cppVersion = 11;
+	get_optional_double_from_config(CONFIG, "cpp.version", cppVersion);
+
+	// Look for third party dependencies in project.cfg; if found, require pkg-config command
+	vector<Pkg> packages;
+	regex pattern("^pkg.([a-zA-Z9-9_-]+)(<|>)$");
+	smatch matches;
+	for(const string KEY : CONFIG.keys()) {
+		if(KEY.length() > 4 && KEY.rfind("pkg.",0) == 0) {
+			Pkg pkg;
+			if(regex_search(KEY, matches, pattern)) {
+				pkg.name = matches[1].str(); // match 0 is always the whole match
+				pkg.relation = matches[2].str() + "=";
+			} else {
+				pkg.name = KEY;
+			}
+			get_optional_version_from_config(CONFIG, KEY, pkg.version);
+			packages.push_back(pkg);
+		}
+	}
+
+	if(packages.size() > 0) {
+		assert_command_exists(whichPkgConfig, "pkg-config");
+	}
+
+	#pragma GCC warn clean up cog info messages, pkg config lookup
+
 
 	string dependencyRules = "", srcFiles = "";
-
 	// Find all compilable c++ files
 	for(const auto &entry : fs::recursive_directory_iterator("src")) {
 		if(!fs::is_directory(entry)) {
@@ -183,16 +274,17 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG = get_confi
 string("# autogenerated makefile\n")
 + "TARGET = build/" + projectName + "\n"
 + "SRC_FILES = " + configstring::stringlib::str_trim(srcFiles) + "\n"
-+ "CXX = g++\n"
-+ format("CFLAGS = -Wall -g -std=c++17 -DPROJECT_NAME=\"\\\"%s\\\"\" -DPROJECT_VERSION=\"\\\"%s\\\"\" -DPROJECT_AUTHOR=\"\\\"%s\\\"\"\n", escape_quotes(escape_quotes(projectName)).c_str(), escape_quotes(escape_quotes(projectVersion)).c_str(), escape_quotes(escape_quotes(projectAuthor)).c_str())
++ "CXX = " + whichCPP + "\n"
++ format("CFLAGS = -std=c++%i -Wall%s -g -std=c++17 -DPROJECT_NAME=\"\\\"%s\\\"\" -DPROJECT_VERSION=\"\\\"%s\\\"\" -DPROJECT_AUTHOR=\"\\\"%s\\\"\"\n", (int)cppVersion, (cppStrict ? " -Werror -Wpedantic" : ""), escape_quotes(escape_quotes(projectName)).c_str(), escape_quotes(escape_quotes(projectVersion)).c_str(), escape_quotes(escape_quotes(projectAuthor)).c_str())
 + R"""(
 OBJECTS = $(patsubst src/%.cpp,build/%.o,${SRC_FILES})
 
 ifeq ($(shell echo "Windows"), "Windows")
 	TARGET := $(TARGET).exe
-	CFLAGS += -DWINDOWS
 endif
-
+)"""
++ MAKE_MATCH_OS
++ R"""(
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
@@ -203,8 +295,14 @@ build/%.o: src/%.cpp
 
 # DEPENDENCIES
 )""" + dependencyRules);
+	
 
-	const auto MAKE_RESULT = commands::run("make --makefile=build/makefile --silent");
+	vector<string> args = {"--makefile=build/makefile", "--silent"};
+	if(!DEBUG) {
+		args.push_back("--always-make");
+	}
+
+	const auto MAKE_RESULT = commands::run(whichMake, args);
 	if(MAKE_RESULT != 0) {
 		throw runtime_error("Error running make");
 	}
@@ -227,7 +325,17 @@ void run(const bool DEBUG, const vector<string> ARGS, const configstring::Config
 
 	printlnf("Running project %s:", name.c_str());
 	
-	printlnf("Project exited with code %i", commands::run(("./build/" + name).c_str(), ARGS));
+	printlnf("Project exited with code %i", commands::run("./build/" + name, ARGS));
+}
+
+/// @brief Sends a warning to the console that ARG is not a valid argument
+void warn_unexpected_argument(const char* ARG) {
+	eprintlnf("%sUnexpected argument \"%s\"%s", formatting::colors::fg::YELLOW, ARG, formatting::colors::fg::REVERT);
+}
+
+/// @brief Sends a warning to the console that ARG is not a valid argument
+void warn_unexpected_argument(const string ARG) {
+	warn_unexpected_argument(ARG.c_str());
 }
 
 int main(int argc, char *argv[]) {
@@ -243,7 +351,7 @@ int main(int argc, char *argv[]) {
 			if(argc > 2) {
 				targetName = argv[2];
 				for(int i = 3; i < argc; i++) {
-					eprintlnf("Unexpected argument \"%s\"", argv[i]);
+					warn_unexpected_argument(argv[i]);
 				}
 			}
 			
@@ -262,7 +370,7 @@ int main(int argc, char *argv[]) {
 				} else if(readingThisArgs && (ARG_I == "--release" || ARG_I == "-r")) {
 					debug = false;
 				} else if(readingThisArgs) {
-					eprintlnf("Unexpected argument \"%s\"", ARG_I.c_str());
+					warn_unexpected_argument(ARG_I);
 				} else {
 					projectArgs.push_back(ARG_I);
 				}
@@ -276,15 +384,15 @@ int main(int argc, char *argv[]) {
 				if((ARG_I == "--release" || ARG_I == "-r")) {
 					debug = false;
 				} else {
-					eprintlnf("Unexpected argument \"%s\"", ARG_I.c_str());
+					warn_unexpected_argument(ARG_I);
 				}
 			}
 			build(debug);
 		} else {
-			eprintlnf("Unexpected argument \"%s\"", ARG.c_str());
+			warn_unexpected_argument(ARG);
 		}
 		return 0;
 	} catch(const runtime_error &ERR) {
-		eprintlnf("Runtime error \"%s\"", ERR.what());
+		eprintlnf("%sRuntime error: %s%s", formatting::colors::fg::RED, ERR.what(), formatting::colors::fg::REVERT);
 	}
 }

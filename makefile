@@ -3,12 +3,12 @@
 # THE NAME OF YOUR EXECUTABLE
 TARGET = cog
 # ALL CPP COMPILABLE IMPLEMENTATION FILES THAT MAKE UP THE PROJECT
-SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp
+SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp formatting.cpp third_party/matchOS.cpp
 
 # NO EDITS NEEDED BELOW THIS LINE
 
 CXX = g++
-CFLAGS = -Wall -g -std=c++17
+CFLAGS = -Wall -g -std=c++17 -DANSI_FORMATTING
 
 OBJECTS = $(SRC_FILES:.cpp=.o)
 

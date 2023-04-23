@@ -4,6 +4,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <string>
 #include "console.hpp"
 #include "configstring/stringlib.h"
 
@@ -14,16 +15,16 @@ using namespace console;
 #define popen _popen
 #define pclose _pclose
 #endif
-
+#include <iostream>
 namespace commands {
-    int run(const char* command, const vector<string> ARGS) {
+    int run(const string COMMAND, const vector<string> ARGS) {
         string tail = "";
         for(const auto ARG : ARGS) {
             tail += format(" \"%s\"", configstring::stringlib::str_replace(ARG,"\"","\\\"").c_str());
         }
-        return system(format("%s%s", command, tail.c_str()).c_str());
+        return system(format("%s%s", COMMAND.c_str(), tail.c_str()).c_str());
     }
-    CommandResult run_and_read(const char* command, const vector<string> ARGS) {
+    CommandResult run_and_read(const string COMMAND, const vector<string> ARGS) {
         string tail = "";
         for(const auto ARG : ARGS) {
             tail += format(" \"%s\"", configstring::stringlib::str_replace(ARG,"\"","\\\"").c_str());
@@ -31,9 +32,9 @@ namespace commands {
         
         char buffer[128];
         string result = "";
-        FILE* pipe = popen(format("%s%s", command, tail).c_str(), "r");
+        FILE* pipe = popen(format("%s%s", COMMAND.c_str(), tail.c_str()).c_str(), "r");
         if (!pipe) {
-            throw runtime_error(format("Failed to run command \"%s\"", command));
+            throw runtime_error(format("Failed to run command \"%s\"", COMMAND.c_str()));
         }
         try {
             while (fgets(buffer, sizeof buffer, pipe) != NULL) {
@@ -41,7 +42,7 @@ namespace commands {
             }
         } catch (...) {
             pclose(pipe);
-            throw runtime_error(format("Failed to run command \"%s\"", command));
+            throw runtime_error(format("Failed to run command \"%s\"", COMMAND.c_str()));
         }
         return CommandResult {result, pclose(pipe)};
     }
