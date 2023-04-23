@@ -11,6 +11,7 @@
  */
 
 #include <string>
+
 #include "matchOS.h"
 
 /// @brief Makefile code to define macros depending on host OS

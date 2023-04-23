@@ -58,6 +58,8 @@
         "iomanip": "cpp",
         "list": "cpp",
         "ratio": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "deque": "cpp",
+        "queue": "cpp"
     }
 }

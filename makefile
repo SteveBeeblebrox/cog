@@ -3,7 +3,7 @@
 # THE NAME OF YOUR EXECUTABLE
 TARGET = cog
 # ALL CPP COMPILABLE IMPLEMENTATION FILES THAT MAKE UP THE PROJECT
-SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp formatting.cpp third_party/matchOS.cpp
+SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp formatting.cpp third_party/matchOS.cpp confighelper.cpp actions.cpp
 
 # NO EDITS NEEDED BELOW THIS LINE
 
