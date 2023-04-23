@@ -17,34 +17,34 @@
 const std::string MAKE_MATCH_OS = 
 R"""(
 ifeq ($(OS),Windows_NT)
-    CFLAGS += -D WIN32
+    CFLAGS += -DWIN32
     ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-        CFLAGS += -D AMD64
+        CFLAGS += -DAMD64
     else
         ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-            CFLAGS += -D AMD64
+            CFLAGS += -DAMD64
         endif
         ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-            CFLAGS += -D IA32
+            CFLAGS += -DIA32
         endif
     endif
 else
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
-        CFLAGS += -D LINUX
+        CFLAGS += -DLINUX
     endif
     ifeq ($(UNAME_S),Darwin)
-        CFLAGS += -D OSX
+        CFLAGS += -DOSX
     endif
     UNAME_P := $(shell uname -p)
     ifeq ($(UNAME_P),x86_64)
-        CFLAGS += -D AMD64
+        CFLAGS += -DAMD64
     endif
     ifneq ($(filter %86,$(UNAME_P)),)
-        CFLAGS += -D IA32
+        CFLAGS += -DIA32
     endif
     ifneq ($(filter arm%,$(UNAME_P)),)
-        CFLAGS += -D ARM
+        CFLAGS += -DARM
     endif
 endif
 )""";
