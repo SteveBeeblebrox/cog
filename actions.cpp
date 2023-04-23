@@ -35,14 +35,23 @@ void create_new_project(const std::string NAME) {
 	files::fwrite(NAME + "/.gitignore", R"""(build)""");
 
 	files::fwrite(NAME + "/project.cfg", format(
-R"""(# Project details;
+R"""(# Project Details;
 project.name=%s;
 project.version=1.0;
 project.author=You!;
 
 # Compilation Settings;
-cpp.version=11;
-cpp.strict=false;
+#cpp.version=11;
+#cpp.strict=true;
+
+#which.cpp=g++;
+#which.make=make;
+#which.pkg-config=pkg-config;
+
+# Package Dependencies;
+#pkg.libR=1.0;
+#pkg.zlib>=2.0;
+#pkg.libpcre2-8;
 )""", NAME.c_str()));
 
 	files::mkdir(NAME + "/src");
