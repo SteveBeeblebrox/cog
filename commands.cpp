@@ -19,7 +19,7 @@ using namespace console;
 
 namespace commands {
     /// @brief Run COMMAND with ARGS and return exit code (stdout is written to console)
-    int run(const string COMMAND, const std::vector<std::string> ARGS) {
+    int run(const std::string COMMAND, const std::vector<std::string> ARGS) {
         string tail = "";
         for(const auto ARG : ARGS) {
             tail += format(" \"%s\"", escape_quotes(ARG).c_str());

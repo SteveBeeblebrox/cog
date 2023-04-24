@@ -47,5 +47,4 @@ else
     ifneq ($(filter arm%,$(UNAME_P)),)
         CFLAGS += -DARM
     endif
-endif
-)""";
+endif)""";
