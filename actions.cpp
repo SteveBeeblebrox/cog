@@ -43,6 +43,7 @@ project.author=You!;
 # Compilation Settings;
 #cpp.version=11;
 #cpp.strict=true;
+#cpp.static=false;
 
 #which.cpp=g++;
 #which.make=make;
@@ -169,8 +170,9 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 	commands::assert_command_exists(whichCPP, "cpp");
 	commands::assert_command_exists(whichMake, "make");
 
-	bool cppStrict = false;
+	bool cppStrict = false, cppStatic = false;
 	get_optional_bool_from_config(CONFIG, "cpp.strict", cppStrict);
+	get_optional_bool_from_config(CONFIG, "cpp.static", cppStatic);
 
 	double cppVersion = 11;
 	get_optional_double_from_config(CONFIG, "cpp.version", cppVersion);
@@ -196,6 +198,16 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 			}
 			get_optional_version_from_config(CONFIG, KEY, pkg.version);
 			packages.push_back(pkg);
+		}
+	}
+
+	// Format and concat arguments for pkg-config
+	string pkgConfigList = "";
+	for(const Pkg PKG : packages) {
+		if(PKG.version != "*") {
+			pkgConfigList += format(" \"%s %s %s\"", commands::escape_quotes(PKG.name).c_str(), PKG.relation.c_str(), PKG.version.c_str());
+		} else {
+			pkgConfigList += format(" \"%s\"", commands::escape_quotes(PKG.name).c_str());
 		}
 	}
 
@@ -236,14 +248,12 @@ endif
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	@$(CXX) -o $@ $^
-
-build/%.o: src/%.cpp
-	@$(CXX) $(CFLAGS) -o $@ -c $<
-
+	@$(CXX) -o $@ $^)""" + (cppStatic ? " --static" : "") + (packages.size() > 0 ? format(" $(%s --libs%s))", whichPkgConfig.c_str(), (cppStatic ? " --static" : ""), pkgConfigList.c_str()) : "")
++ R"""(build/%.o: src/%.cpp
+	@$(CXX) $(CFLAGS) -o $@ -c $<)""" + (packages.size() > 0 ? format(" $(%s --clfags%s)", whichPkgConfig.c_str(), pkgConfigList.c_str()) : "")
++ R"""(
 # DEPENDENCIES
 )""" + dependencyRules);
-	
 
 	vector<string> args = {"--makefile=build/makefile", "--silent"};
 	if(!DEBUG) {
