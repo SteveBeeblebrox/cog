@@ -242,9 +242,6 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 		pkgLinkFlags = " " + PKG_CONFIG_LINK_RESULT.output;
 	}
 
-	#pragma GCC warn pkg config lookup
-
-
 	string dependencyRules = "", srcFiles = "";
 	// Find all compilable c++ files
 	for(const auto &entry : fs::recursive_directory_iterator("src")) {
