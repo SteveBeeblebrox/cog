@@ -1,38 +1,38 @@
 #include "files.h"
 
-#include <filesystem>
 #include <fstream> 
 #include <string>
 
+#include "filesystem.h"
 #include "console.hpp"
 
-namespace fs = std::filesystem;
+namespace fs = FILESYSTEM_NAMESPACE;
 using namespace std;
 using namespace console;
 
 namespace files {
-    /// @brief Creates a directory named name if it does not exist already
-    void mkdir(std::string name) {
-        if (!fs::is_directory(name) || !fs::exists(name)) {
-            fs::create_directory(name);
+    /// @brief Creates a directory named NAME if it does not exist already
+    void mkdir(const std::string NAME) {
+        if (!fs::is_directory(NAME) || !fs::exists(NAME)) {
+            fs::create_directory(NAME);
         }
     }
 
     /// @brief Opens a file, writes to it, and closes the file
-    void fwrite(std::string name, std::string text) {
-        ofstream stream(name);
+    void fwrite(const std::string NAME, const std::string TEXT) {
+        ofstream stream(NAME);
         if(stream.fail()) {
-            throw runtime_error(format("Error creating file \"%s\"", name));
+            throw runtime_error(format("Error creating file \"%s\"", NAME.c_str()));
         }
-        stream << text;
+        stream << TEXT;
         stream.close();
     }
     
     /// @brief Opens a file, reads it in its entirety to a string, and closes the file
-    std::string fread(std::string name) {
-        ifstream stream(name);
+    std::string fread(const std::string NAME) {
+        ifstream stream(NAME);
         if(stream.fail()) {
-            throw runtime_error(format("Error reading file \"%s\"", name));
+            throw runtime_error(format("Error reading file \"%s\"", NAME.c_str()));
         }
         stringstream buffer;
         buffer << stream.rdbuf();

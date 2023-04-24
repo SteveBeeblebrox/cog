@@ -13,7 +13,6 @@ using namespace console;
 
 namespace colors = formatting::colors::fg;
 namespace fmt = formatting;
-namespace fs = std::filesystem;
 
 /// @brief Sends a warning to the console that ARG is not a valid argument
 void warn_unexpected_argument(const char* ARG) {

@@ -1,11 +1,9 @@
 #ifndef CONFIGHELPER_H
 #define CONFIGHELPER_H
 #include <stdexcept>
-#include <filesystem>
 #include <string>
 
 #include "configstring/configstring.h"
-#include "files.h"
 
 /// @brief Load project config from a Project.config falling back to Project.cfg, project.config, and project.cfg in that order
 configstring::ConfigObject get_config() ;

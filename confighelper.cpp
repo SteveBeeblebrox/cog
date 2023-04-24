@@ -1,16 +1,16 @@
 #include "confighelper.h"
 
 #include <stdexcept>
-#include <filesystem>
 #include <string>
 
+#include "filesystem.h"
 #include "configstring/configstring.h"
 #include "files.h"
 #include "console.hpp"
 
 using namespace std;
 
-namespace fs = std::filesystem;
+namespace fs = FILESYSTEM_NAMESPACE;
 
 /// @brief Load project config from a Project.config falling back to Project.cfg, project.config, and project.cfg in that order
 configstring::ConfigObject get_config() {

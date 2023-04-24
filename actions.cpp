@@ -4,10 +4,10 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <filesystem>
 #include <queue>
 #include <regex>
 
+#include "filesystem.h"
 #include "configstring/configstring.h"
 #include "console.hpp"
 #include "files.h"
@@ -24,7 +24,7 @@ using namespace console;
 
 namespace colors = formatting::colors::fg;
 namespace fmt = formatting;
-namespace fs = std::filesystem;
+namespace fs = FILESYSTEM_NAMESPACE;
 
 /// @brief Make a new project called NAME in a new folder called NAME. A default main.cpp and project.cfg is generated
 void create_new_project(const std::string NAME) {
@@ -68,7 +68,7 @@ int main() {
 }
 
 /// @brief For the C++ source file at FILE, recursively get all dependencies for make to watch timestamps
-std::string get_make_dependencies(const std::filesystem::path FILE) {
+std::string get_make_dependencies(const FILESYSTEM_NAMESPACE::path FILE) {
 	string line;
 	string rule = FILE.stem().string() + ".o: " + FILE.string();
 	queue<fs::path> dependencies;
@@ -296,10 +296,13 @@ void run(const bool DEBUG, const std::vector<std::string> ARGS, const configstri
 	get_string_from_config(CONFIG, "project.name", name);
 
 #ifdef WINDOWS
+	const char CMD_PATH_SEPERATOR = '\\';
 	name += ".exe";
+#else
+	const char CMD_PATH_SEPERATOR = '/';
 #endif
 
 	eprintlnf("%s%sRunning project %s:%s%s", fmt::ITALIC, colors::CYAN, name.c_str(), colors::REVERT, fmt::REVERT_ITALIC);
 	
-	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run("./build/" + name, ARGS), colors::REVERT, fmt::REVERT_ITALIC);
+	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run(format(".%cbuild%c%s", CMD_PATH_SEPERATOR, CMD_PATH_SEPERATOR, name.c_str()), ARGS), colors::REVERT, fmt::REVERT_ITALIC);
 }
