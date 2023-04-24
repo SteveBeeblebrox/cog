@@ -4,8 +4,10 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 #include <queue>
 #include <regex>
+#include <map>
 
 #include "filesystem.h"
 #include "configstring/configstring.h"
@@ -181,26 +183,81 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 		string name;
 		string relation = "=";
 		string version = "*";
+		bool required = true;
 	};
 
 	// Look for third party dependencies in project.cfg; if found, require pkg-config command
 	vector<Pkg> packages;
-	regex pattern("^pkg.([a-zA-Z9-9_-]+)(<|>)$");
+	regex pkgPattern("^pkg\\??.([a-zA-Z9-9_-]+)(<|>)$");
 	smatch matches;
 	for(const string KEY : CONFIG.keys()) {
-		if(KEY.length() > 4 && KEY.rfind("pkg.",0) == 0) {
+		const bool
+			IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
+			IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0;
+		if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
 			Pkg pkg;
-			if(regex_search(KEY, matches, pattern)) {
+			if(regex_search(KEY, matches, pkgPattern)) {
 				pkg.name = matches[1].str(); // match 0 is always the whole match
 				pkg.relation = matches[2].str() + "=";
 			} else {
-				pkg.name = KEY.substr(4);
+				pkg.name = KEY.substr(4 + IS_OPTIONAL_PACKAGE);
+			}
+			if(IS_OPTIONAL_PACKAGE) {
+				pkg.required = false;
 			}
 			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
 			else get_optional_version_from_config(CONFIG, KEY, pkg.version);
 			packages.push_back(pkg);
 		}
 	}
+
+	// Look for feature flags (done after reading all packages to ignore order)
+	struct Feature {
+		bool enabled = true;
+		vector<string> requires;
+	};
+	map<string, Feature> features;
+	for(const string KEY : CONFIG.keys()) {
+		const bool
+			IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
+			IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8+9 && KEY.substr(KEY.length()-9) == ".required";
+		if(IS_FEATURE_DTL) {
+			const string FEATURE_NAME = KEY.substr(0,KEY.length()-9);
+			Feature fallback;
+			Feature& feature = fallback;
+			auto iter = features.find(FEATURE_NAME);
+			if(iter != features.end()) {
+				feature = iter->second;
+			} else {
+				features.insert({FEATURE_NAME, feature});
+			}
+
+			string value = "";
+			get_string_from_config(CONFIG,KEY,value);
+			for(const string ENTRY : configstring::stringlib::str_split(value, (const char)',')) {
+				feature.requires.push_back(configstring::stringlib::str_trim(ENTRY));
+			}
+		} else if(IS_FEATURE) {
+			Feature fallback;
+			Feature& feature = fallback;
+			auto iter = features.find(KEY);
+			if(iter != features.end()) {
+				feature = iter->second;
+			} else {
+				features.insert({KEY, feature});
+			}
+			get_optional_bool_from_config(CONFIG, KEY, feature.enabled);
+		}
+	}
+
+	for(auto const& [key, val] : features) {
+		printf("Feature %s %i %i", key.c_str(), val.enabled, val.requires.size());
+	}
+
+	packages.erase(
+		remove_if(packages.begin(), packages.end(), [](const Pkg PKG) { return !PKG.required; }),
+		packages.end()
+	);
 
 	string pkgLinkFlags = "", pkgCompileFlags = "";
 	if(packages.size() > 0) {
