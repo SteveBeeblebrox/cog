@@ -152,7 +152,7 @@ Usage:
 }
 
 /// @brief Build the project from the given config settings and set debug mode (defines the DEBUG macro for the project if true)
-void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
+void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::string> FEATURES, const configstring::ConfigObject CONFIG) {
 	files::mkdir("build");
 	
 	// Get project settings
@@ -206,126 +206,140 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 	// Look for feature flags (done after reading all packages to ignore order)
 	map<string, Feature*> features;
 	regex featurePattern("^feature.([A-Z0-9_]+)(.required)?$");
-
-	for(const string KEY : CONFIG.keys()) {
-		const bool
-			IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
-			IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0,
-			IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
-			IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
-			IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 5 && KEY.substr(KEY.length() - 5) == ".note";
-		if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
-			Pkg pkg;
-			if(regex_search(KEY, matches, pkgPatternLG)) {
-				pkg.name = matches[1].str(); // match 0 is always the whole match
-				pkg.relation = matches[2].str() + "=";
-			} else if(regex_match(KEY, pkgPatternSimple)) {
-				pkg.name = KEY.substr(4 + IS_OPTIONAL_PACKAGE);
-			} else {
-				throw runtime_error(format("Package \"%s\" in project config does not contain a valid package name", commands::escape_quotes(KEY).c_str()));
-			}
-
-			if(IS_OPTIONAL_PACKAGE) {
-				pkg.required = false;
-			}
-
-			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
-			else get_optional_version_from_config(CONFIG, KEY, pkg.version);
-
-			packages.push_back(pkg);
-		} else if(IS_FEATURE_DTL) {
-			if(!regex_match(KEY, featurePattern)) {
-				throw runtime_error(format("Feature detail \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
-			}
-
-			const string FEATURE_NAME = KEY.substr(0,KEY.length()-9);
-			Feature* pFeature;
-			auto iter = features.find(FEATURE_NAME);
-			if(iter != features.end()) {
-				pFeature = iter->second;
-			} else {
-				pFeature = new Feature;
-				features.insert({FEATURE_NAME, pFeature});
-			}
-
-			string value = "";
-			get_string_from_config(CONFIG,KEY,value);
-			for(const string ITEM : configstring::stringlib::str_split(value, (const char)',')) {
-				pFeature->dependencies.push_back(configstring::stringlib::str_trim(ITEM));
-			}
-		} else if(IS_FEATURE && !IS_FEATURE_NOTE) {
-			if(!regex_match(KEY, featurePattern)) {
-				throw runtime_error(format("Feature \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
-			}
-
-			Feature* pFeature;
-			auto iter = features.find(KEY);
-			if(iter != features.end()) {
-				pFeature = iter->second;
-			} else {
-				pFeature = new Feature;
-				features.insert({KEY, pFeature});
-			}
-
-			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
-			else get_optional_bool_from_config(CONFIG, KEY, pFeature->enabled);
-		}
-	}
-
-	queue<string> featuresToEnable;
-
-	// Add default features
-	for(auto const& [KEY, P_feature] : features) {
-		if(P_feature->enabled) {
-			featuresToEnable.push(KEY);
-		}
-	}
-
-	// BFS to enable features and optional packages
-	while(!featuresToEnable.empty()) {
-		const string NEXT = featuresToEnable.front();
-		auto iter = features.find(NEXT);
-		Feature *pFeature;
-
-		if(iter != features.end()) {
-			pFeature = iter->second;
-		} else {
-			throw runtime_error(format("Cannot enable feature \"%s\" since it does not exist", commands::escape_quotes(NEXT).c_str()));
-		}
-		featuresToEnable.pop();
-
-		if(pFeature->visited) {
-			continue;
-		} else {
-			pFeature->visited = true;
-		}
-
-		pFeature->enabled = true;
-
-		for(const string ITEM : pFeature->dependencies) {
-			if(ITEM.length() > 4 && ITEM.rfind("pkg.",0) == 0) {
-				auto iter = find_if(packages.begin(), packages.end(), [ITEM](const Pkg& PKG) { return PKG.name == ITEM.substr(4); });
-				if(iter == packages.end()) {
-					throw runtime_error(format("Cannot require package \"%s\" since is not specified", commands::escape_quotes(ITEM).c_str()));
-				} else {
-					iter->required = true;
-				}
-			} else if(ITEM.length() > 8 && ITEM.rfind("feature.",0) == 0) {
-				featuresToEnable.push(ITEM);
-			} else {
-				throw runtime_error(format("Unexpected entry \"%s\" in \"%s.required\"", commands::escape_quotes(ITEM).c_str(), commands::escape_quotes(NEXT).c_str()));
-			}
-		}
-	}
-
 	string featureFlags = "";
-	for(auto const& [KEY, P_feature] : features) {
-		if(P_feature->enabled) {
-			featureFlags += format(" -DFEATURE_%s", KEY.substr(8).c_str());
+
+	try {
+		for(const string KEY : CONFIG.keys()) {
+			const bool
+				IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
+				IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0,
+				IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
+				IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
+				IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 6 && KEY.substr(KEY.length() - 6) == ".notes";
+			if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
+				Pkg pkg;
+				if(regex_search(KEY, matches, pkgPatternLG)) {
+					pkg.name = matches[1].str(); // match 0 is always the whole match
+					pkg.relation = matches[2].str() + "=";
+				} else if(regex_match(KEY, pkgPatternSimple)) {
+					pkg.name = KEY.substr(4 + IS_OPTIONAL_PACKAGE);
+				} else {
+					throw runtime_error(format("Package \"%s\" in project config does not contain a valid package name", commands::escape_quotes(KEY).c_str()));
+				}
+
+				if(IS_OPTIONAL_PACKAGE) {
+					pkg.required = false;
+				}
+
+				if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
+				else get_optional_version_from_config(CONFIG, KEY, pkg.version);
+
+				packages.push_back(pkg);
+			} else if(IS_FEATURE_DTL) {
+				if(!regex_match(KEY, featurePattern)) {
+					throw runtime_error(format("Feature detail \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
+				}
+
+				const string FEATURE_NAME = KEY.substr(0,KEY.length()-9);
+				Feature* pFeature;
+				auto iter = features.find(FEATURE_NAME);
+				if(iter != features.end()) {
+					pFeature = iter->second;
+				} else {
+					pFeature = new Feature;
+					features.insert({FEATURE_NAME, pFeature});
+				}
+
+				string value = "";
+				get_string_from_config(CONFIG,KEY,value);
+				for(const string ITEM : configstring::stringlib::str_split(value, (const char)',')) {
+					pFeature->dependencies.push_back(configstring::stringlib::str_trim(ITEM));
+				}
+			} else if(IS_FEATURE && !IS_FEATURE_NOTE) {
+				if(!regex_match(KEY, featurePattern)) {
+					throw runtime_error(format("Feature \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
+				}
+
+				Feature* pFeature;
+				auto iter = features.find(KEY);
+				if(iter != features.end()) {
+					pFeature = iter->second;
+				} else {
+					pFeature = new Feature;
+					features.insert({KEY, pFeature});
+				}
+
+				pFeature->enabled = DEFAULT_FEATURES;
+
+				if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
+				else get_optional_bool_from_config(CONFIG, KEY, pFeature->enabled);
+			}
 		}
-		delete P_feature;
+
+		queue<string> featuresToEnable;
+
+		for(const string FEATURE : FEATURES) {
+			featuresToEnable.push("feature." + FEATURE);
+		}
+
+		// Add default features
+		for(auto const& [KEY, P_feature] : features) {
+			if(P_feature->enabled) {
+				featuresToEnable.push(KEY);
+			}
+		}
+
+		// BFS to enable features and optional packages
+		while(!featuresToEnable.empty()) {
+			const string NEXT = featuresToEnable.front();
+			auto iter = features.find(NEXT);
+			Feature *pFeature;
+
+			if(iter != features.end()) {
+				pFeature = iter->second;
+			} else {
+				throw runtime_error(format("Cannot enable feature \"%s\" since it does not exist", commands::escape_quotes(NEXT).c_str()));
+			}
+			featuresToEnable.pop();
+
+			if(pFeature->visited) {
+				continue;
+			} else {
+				pFeature->visited = true;
+			}
+
+			pFeature->enabled = true;
+
+			for(const string ITEM : pFeature->dependencies) {
+				if(ITEM.length() > 4 && ITEM.rfind("pkg.",0) == 0) {
+					auto iter = find_if(packages.begin(), packages.end(), [ITEM](const Pkg& PKG) { return PKG.name == ITEM.substr(4); });
+					if(iter == packages.end()) {
+						throw runtime_error(format("Cannot require package \"%s\" since is not specified", commands::escape_quotes(ITEM).c_str()));
+					} else {
+						iter->required = true;
+					}
+				} else if(ITEM.length() > 8 && ITEM.rfind("feature.",0) == 0) {
+					featuresToEnable.push(ITEM);
+				} else {
+					throw runtime_error(format("Unexpected entry \"%s\" in \"%s.required\"", commands::escape_quotes(ITEM).c_str(), commands::escape_quotes(NEXT).c_str()));
+				}
+			}
+		}
+
+		for(auto const& [KEY, P_feature] : features) {
+			if(P_feature->enabled) {
+				featureFlags += format(" -DFEATURE_%s", KEY.substr(8).c_str());
+			}
+			delete P_feature;
+		}
+		features.clear();
+	} catch(const runtime_error &ERR) {
+		for(auto const& [KEY, P_feature] : features) {
+			delete P_feature;
+		}
+		features.clear();
+		throw ERR;
 	}
-	features.clear();
 
 	packages.erase(
 		remove_if(packages.begin(), packages.end(), [](const Pkg PKG) { return !PKG.required; }),
@@ -419,8 +433,8 @@ build/%.o: src/%.cpp
 }
 
 /// @brief Build the project and then run it with args
-void run(const bool DEBUG, const std::vector<std::string> ARGS, const configstring::ConfigObject CONFIG) {
-	build(DEBUG, CONFIG);
+void run(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::string> FEATURES, const std::vector<std::string> ARGS, const configstring::ConfigObject CONFIG) {
+	build(DEBUG, DEFAULT_FEATURES, FEATURES, CONFIG);
 
 	string name;
 	get_string_from_config(CONFIG, "project.name", name);

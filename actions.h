@@ -18,9 +18,9 @@ std::string get_make_dependencies(const FILESYSTEM_NAMESPACE::path FILE);
 void show_help();
 
 /// @brief Build the project from the given config settings and set debug mode (defines the DEBUG macro for the project if true)
-void build(const bool DEBUG, const configstring::ConfigObject CONFIG = get_config());
+void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::string> FEATURES, const configstring::ConfigObject CONFIG = get_config());
 
 /// @brief Build the project and then run it with args
-void run(const bool DEBUG, const std::vector<std::string> ARGS, const configstring::ConfigObject CONFIG = get_config());
+void run(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::string> FEATURES, const std::vector<std::string> ARGS, const configstring::ConfigObject CONFIG = get_config());
 
 #endif

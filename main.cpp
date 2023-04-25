@@ -47,33 +47,49 @@ int main(int argc, char *argv[]) {
 		} else if(ARG == "--version" || ARG == "-v") {
 			printlnf("cog v%s", VERSION);
 		} else if(ARG == "run") {
-			vector<string> projectArgs;
-			bool debug = true, readingThisArgs = true;
+			vector<string> projectArgs, features;
+			bool debug = true, readingThisArgs = true, defaultFeatures = true;
 			for(int i = 2; i < argc; i++) {
 				const auto ARG_I = string(argv[i]);
 				if(readingThisArgs && ARG_I == "--") {
 					readingThisArgs = false;
 				} else if(readingThisArgs && (ARG_I == "--release" || ARG_I == "-r")) {
 					debug = false;
+				} else if(readingThisArgs && (ARG_I == "--no-default-features" || ARG_I == "-x")) {
+					defaultFeatures = false;
+				} else if(readingThisArgs && (ARG_I == "--feature" || ARG_I == "-F")) {
+					if(i + 1 < argc) {
+						features.push_back(argv[++i]);
+					} else {
+						warn_unexpected_argument(ARG_I);
+					}
 				} else if(readingThisArgs) {
 					warn_unexpected_argument(ARG_I);
 				} else {
 					projectArgs.push_back(ARG_I);
 				}
 			}
-			run(debug, projectArgs);
+			run(debug, defaultFeatures, features, projectArgs);
 		} else if(ARG == "build") {
-			vector<string> projectArgs;
-			bool debug = true;
+			vector<string> features;
+			bool debug = true, defaultFeatures = true;
 			for(int i = 2; i < argc; i++) {
 				const auto ARG_I = string(argv[i]);
 				if((ARG_I == "--release" || ARG_I == "-r")) {
 					debug = false;
+				} else if((ARG_I == "--no-default-features" || ARG_I == "-x")) {
+					defaultFeatures = false;
+				} else if((ARG_I == "--feature" || ARG_I == "-F")) {
+					if(i + 1 < argc) {
+						features.push_back(argv[++i]);
+					} else {
+						warn_unexpected_argument(ARG_I);
+					}
 				} else {
 					warn_unexpected_argument(ARG_I);
 				}
 			}
-			build(debug);
+			build(debug, defaultFeatures, features);
 		} else if(ARG == "features") {
 			const configstring::ConfigObject CONFIG = get_config();
 
@@ -92,10 +108,18 @@ int main(int argc, char *argv[]) {
 
 				if(IS_FEATURE && !IS_FEATURE_DTL && !IS_FEATURE_NOTE) {
 					hasAny = true;
+					
 					string notes = "";
-					if(const auto VALUE = CONFIG.get(KEY + ".notes")->as<configstring::Null>());
-					else get_optional_string_from_config(CONFIG , KEY + ".notes", notes);
-					printlnf("\t%s%s", KEY.substr(8).c_str(), (notes != "" ? " - " + notes : "").c_str());
+					if(CONFIG.has(KEY + ".notes")) {
+						if(const auto VALUE = CONFIG.get(KEY + ".notes")->as<configstring::Null>());
+						else get_optional_string_from_config(CONFIG , KEY + ".notes", notes);
+					}
+
+					bool defaultValue = true;
+					if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
+					else get_optional_bool_from_config(CONFIG , KEY, defaultValue);
+
+					printlnf("\t%s%s%s", KEY.substr(8).c_str(), (notes != "" ? " - " + notes : "").c_str(), (defaultValue ? " (default)" : ""));
 				}
 			}
 
