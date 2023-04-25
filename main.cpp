@@ -74,6 +74,34 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			build(debug);
+		} else if(ARG == "features") {
+			const configstring::ConfigObject CONFIG = get_config();
+
+			string projectName;
+			get_string_from_config(CONFIG, "project.name", projectName);
+
+			printlnf("Features declared by %s:", projectName.c_str());
+
+			bool hasAny = false;
+			for(const string KEY : CONFIG.keys()) {
+				const bool
+					IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
+					IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
+					IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 6 && KEY.substr(KEY.length() - 6) == ".notes";
+
+
+				if(IS_FEATURE && !IS_FEATURE_DTL && !IS_FEATURE_NOTE) {
+					hasAny = true;
+					string notes = "";
+					if(const auto VALUE = CONFIG.get(KEY + ".notes")->as<configstring::Null>());
+					else get_optional_string_from_config(CONFIG , KEY + ".notes", notes);
+					printlnf("\t%s%s", KEY.substr(8).c_str(), (notes != "" ? " - " + notes : "").c_str());
+				}
+			}
+
+			if(!hasAny) {
+				printlnf("\t(None)", "");
+			}
 		} else {
 			warn_unexpected_argument(ARG);
 		}

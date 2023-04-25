@@ -47,9 +47,10 @@ commands.o: commands.cpp commands.h console.hpp configstring/stringlib.h
 confighelper.o: confighelper.cpp confighelper.h \
  configstring/configstring.h configstring/stringlib.h \
  configstring/classes/values.hpp configstring/classes/ConfigObject.h \
- configstring/classes/values.hpp filesystem.h files.h console.hpp
+ configstring/classes/values.hpp filesystem.h files.h console.hpp \
+ commands.h
 console.o: console.cpp console.hpp
-files.o: files.cpp files.h filesystem.h console.hpp
+files.o: files.cpp files.h filesystem.h console.hpp commands.h
 formatting.o: formatting.cpp formatting.h
 main.o: main.cpp console.hpp formatting.h version.h actions.h \
  filesystem.h confighelper.h configstring/configstring.h \

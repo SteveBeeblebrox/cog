@@ -37,7 +37,7 @@ namespace commands {
         string result = "";
         FILE* pipe = popen(format("%s%s", COMMAND.c_str(), tail.c_str()).c_str(), "r");
         if (!pipe) {
-            throw runtime_error(format("Failed to run command \"%s\"", COMMAND.c_str()));
+            throw runtime_error(format("Failed to run command \"%s\"", escape_quotes(COMMAND).c_str()));
         }
         try {
             while (fgets(buffer, sizeof buffer, pipe) != NULL) {
@@ -45,7 +45,7 @@ namespace commands {
             }
         } catch (...) {
             pclose(pipe);
-            throw runtime_error(format("Failed to run command \"%s\"", COMMAND.c_str()));
+            throw runtime_error(format("Failed to run command \"%s\"", escape_quotes(COMMAND).c_str()));
         }
         return CommandResult {result, pclose(pipe)};
     }

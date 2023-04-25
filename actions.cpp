@@ -181,37 +181,20 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 
 	struct Pkg {
 		string name;
+		/// @brief One of =, <=, >=
 		string relation = "=";
+		/// @brief version, * for any
 		string version = "*";
+		///@brief Features can make optional packages required
 		bool required = true;
 	};
 
 	// Look for third party dependencies in project.cfg; if found, require pkg-config command
 	vector<Pkg> packages;
-	regex pkgPattern("^pkg\\??.([a-zA-Z9-9_-]+)(<|>)$");
+	regex pkgPatternLG("^pkg\\??.([a-zA-Z0-9+_-]+)(<|>)$");
+	regex pkgPatternSimple("^pkg\\??.([a-zA-Z0-9+_-]+)$");
 	smatch matches;
-	for(const string KEY : CONFIG.keys()) {
-		const bool
-			IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
-			IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0;
-		if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
-			Pkg pkg;
-			if(regex_search(KEY, matches, pkgPattern)) {
-				pkg.name = matches[1].str(); // match 0 is always the whole match
-				pkg.relation = matches[2].str() + "=";
-			} else {
-				pkg.name = KEY.substr(4 + IS_OPTIONAL_PACKAGE);
-			}
-			if(IS_OPTIONAL_PACKAGE) {
-				pkg.required = false;
-			}
-			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
-			else get_optional_version_from_config(CONFIG, KEY, pkg.version);
-			packages.push_back(pkg);
-		}
-	}
 
-	// Look for feature flags (done after reading all packages to ignore order)
 	struct Feature {
 		bool enabled = true;
 		/// @brief Circular features allowed, used in BFS
@@ -220,13 +203,41 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 		vector<string> dependencies;
 	};
 
-	// Each Feature will be freed when features goes out of scope
+	// Look for feature flags (done after reading all packages to ignore order)
 	map<string, Feature*> features;
+	regex featurePattern("^feature.([A-Z0-9_]+)(.required)?$");
+
 	for(const string KEY : CONFIG.keys()) {
 		const bool
+			IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
+			IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0,
 			IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
-			IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8+9 && KEY.substr(KEY.length()-9) == ".required";
-		if(IS_FEATURE_DTL) {
+			IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
+			IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 5 && KEY.substr(KEY.length() - 5) == ".note";
+		if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
+			Pkg pkg;
+			if(regex_search(KEY, matches, pkgPatternLG)) {
+				pkg.name = matches[1].str(); // match 0 is always the whole match
+				pkg.relation = matches[2].str() + "=";
+			} else if(regex_match(KEY, pkgPatternSimple)) {
+				pkg.name = KEY.substr(4 + IS_OPTIONAL_PACKAGE);
+			} else {
+				throw runtime_error(format("Package \"%s\" in project config does not contain a valid package name", commands::escape_quotes(KEY).c_str()));
+			}
+
+			if(IS_OPTIONAL_PACKAGE) {
+				pkg.required = false;
+			}
+
+			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
+			else get_optional_version_from_config(CONFIG, KEY, pkg.version);
+
+			packages.push_back(pkg);
+		} else if(IS_FEATURE_DTL) {
+			if(!regex_match(KEY, featurePattern)) {
+				throw runtime_error(format("Feature detail \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
+			}
+
 			const string FEATURE_NAME = KEY.substr(0,KEY.length()-9);
 			Feature* pFeature;
 			auto iter = features.find(FEATURE_NAME);
@@ -242,7 +253,11 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 			for(const string ITEM : configstring::stringlib::str_split(value, (const char)',')) {
 				pFeature->dependencies.push_back(configstring::stringlib::str_trim(ITEM));
 			}
-		} else if(IS_FEATURE) {
+		} else if(IS_FEATURE && !IS_FEATURE_NOTE) {
+			if(!regex_match(KEY, featurePattern)) {
+				throw runtime_error(format("Feature \"%s\" in project config does not contain a valid feature name", commands::escape_quotes(KEY).c_str()));
+			}
+
 			Feature* pFeature;
 			auto iter = features.find(KEY);
 			if(iter != features.end()) {
@@ -266,7 +281,6 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 		}
 	}
 
-
 	// BFS to enable features and optional packages
 	while(!featuresToEnable.empty()) {
 		const string NEXT = featuresToEnable.front();
@@ -276,7 +290,7 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 		if(iter != features.end()) {
 			pFeature = iter->second;
 		} else {
-			throw runtime_error(format("Cannot enable feature %s since it does not exist", NEXT.c_str()));
+			throw runtime_error(format("Cannot enable feature \"%s\" since it does not exist", commands::escape_quotes(NEXT).c_str()));
 		}
 		featuresToEnable.pop();
 
@@ -303,6 +317,15 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 			}
 		}
 	}
+
+	string featureFlags = "";
+	for(auto const& [KEY, P_feature] : features) {
+		if(P_feature->enabled) {
+			featureFlags += format(" -DFEATURE_%s", KEY.substr(8).c_str());
+		}
+		delete P_feature;
+	}
+	features.clear();
 
 	packages.erase(
 		remove_if(packages.begin(), packages.end(), [](const Pkg PKG) { return !PKG.required; }),
@@ -366,7 +389,7 @@ string("# autogenerated makefile\n")
 + "TARGET = build/" + projectName + "\n"
 + "SRC_FILES = " + configstring::stringlib::str_trim(srcFiles) + "\n"
 + "CXX = " + whichCPP + "\n"
-+ format("CFLAGS = -std=c++%i -Wall%s -g -std=c++17 -DPROJECT_NAME=\"\\\"%s\\\"\" -DPROJECT_VERSION=\"\\\"%s\\\"\" -DPROJECT_AUTHOR=\"\\\"%s\\\"\"", (int)cppVersion, (cppStrict ? " -Werror -Wpedantic" : ""), commands::escape_quotes(commands::escape_quotes(projectName)).c_str(), commands::escape_quotes(commands::escape_quotes(projectVersion)).c_str(), commands::escape_quotes(commands::escape_quotes(projectAuthor)).c_str()) + R"""(
++ format("CFLAGS = -std=c++%i -Wall%s -g -std=c++17 -DPROJECT_NAME=\"\\\"%s\\\"\" -DPROJECT_VERSION=\"\\\"%s\\\"\" -DPROJECT_AUTHOR=\"\\\"%s\\\"\"", (int)cppVersion, (cppStrict ? " -Werror -Wpedantic" : ""), commands::escape_quotes(commands::escape_quotes(projectName)).c_str(), commands::escape_quotes(commands::escape_quotes(projectVersion)).c_str(), commands::escape_quotes(commands::escape_quotes(projectAuthor)).c_str()) + featureFlags + " " + R"""(
 OBJECTS = $(patsubst src/%.cpp,build/%.o,${SRC_FILES})
 
 ifeq ($(shell echo "Windows"), "Windows")
@@ -403,13 +426,13 @@ void run(const bool DEBUG, const std::vector<std::string> ARGS, const configstri
 	get_string_from_config(CONFIG, "project.name", name);
 
 #ifdef WINDOWS
-	const char CMD_PATH_SEPERATOR = '\\';
+	const char CMD_PATH_SEPARATOR = '\\';
 	name += ".exe";
 #else
-	const char CMD_PATH_SEPERATOR = '/';
+	const char CMD_PATH_SEPARATOR = '/';
 #endif
 
 	eprintlnf("%s%sRunning project %s:%s%s", fmt::ITALIC, colors::CYAN, name.c_str(), colors::REVERT, fmt::REVERT_ITALIC);
 	
-	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run(format(".%cbuild%c%s", CMD_PATH_SEPERATOR, CMD_PATH_SEPERATOR, name.c_str()), ARGS), colors::REVERT, fmt::REVERT_ITALIC);
+	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run(format(".%cbuild%c%s", CMD_PATH_SEPARATOR, CMD_PATH_SEPARATOR, name.c_str()), ARGS), colors::REVERT, fmt::REVERT_ITALIC);
 }

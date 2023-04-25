@@ -7,6 +7,7 @@
 #include "configstring/configstring.h"
 #include "files.h"
 #include "console.hpp"
+#include "commands.h"
 
 using namespace std;
 
@@ -27,7 +28,7 @@ void get_string_from_config(const configstring::ConfigObject &CONFIG, const std:
 	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::String>()) {
 		outValue = VALUE->getValue();
 	}  else {
-		throw runtime_error(KEY + " is not a string");
+		throw runtime_error(console::format("\"%s\" in project config is not a string", commands::escape_quotes(KEY).c_str()));
 	}
 }
 
@@ -43,7 +44,7 @@ void get_bool_from_config(const configstring::ConfigObject &CONFIG, const std::s
 	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Boolean>()) {
 		outValue = VALUE->getValue();
 	}  else {
-		throw runtime_error(KEY + " is not a boolean");
+		throw runtime_error(console::format("\"%s\" in project config is not a boolean", commands::escape_quotes(KEY).c_str()));
 	}
 }
 
@@ -59,7 +60,7 @@ void get_double_from_config(const configstring::ConfigObject &CONFIG, const std:
 	if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Number>()) {
 		outValue = VALUE->getValue();
 	}  else {
-		throw runtime_error(KEY + " is not a number");
+		throw runtime_error(console::format("\"%s\" in project config is not a number", commands::escape_quotes(KEY).c_str()));
 	}
 }
 
@@ -79,7 +80,7 @@ void get_optional_version_from_config(const configstring::ConfigObject &CONFIG, 
 		} else if(const auto value = CONFIG.get(KEY)->as<configstring::Number>()) {
 			outValue = console::format("%.1f",value->getValue());
 		} else {
-			throw runtime_error(KEY + " is not a string or number");
+			throw runtime_error(console::format("\"%s\" in project config is not a string or number", commands::escape_quotes(KEY).c_str()));
 		}
 	}
 }

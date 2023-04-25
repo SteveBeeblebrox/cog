@@ -5,6 +5,7 @@
 
 #include "filesystem.h"
 #include "console.hpp"
+#include "commands.h"
 
 namespace fs = FILESYSTEM_NAMESPACE;
 using namespace std;
@@ -22,7 +23,7 @@ namespace files {
     void fwrite(const std::string NAME, const std::string TEXT) {
         ofstream stream(NAME);
         if(stream.fail()) {
-            throw runtime_error(format("Error creating file \"%s\"", NAME.c_str()));
+            throw runtime_error(format("Error creating file \"%s\"", commands::escape_quotes(NAME).c_str()));
         }
         stream << TEXT;
         stream.close();
@@ -32,7 +33,7 @@ namespace files {
     std::string fread(const std::string NAME) {
         ifstream stream(NAME);
         if(stream.fail()) {
-            throw runtime_error(format("Error reading file \"%s\"", NAME.c_str()));
+            throw runtime_error(format("Error reading file \"%s\"", commands::escape_quotes(NAME).c_str()));
         }
         stringstream buffer;
         buffer << stream.rdbuf();
