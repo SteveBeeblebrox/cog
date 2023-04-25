@@ -139,19 +139,22 @@ Usage:
 
 		Perform global operations
 		Options:
-			-h ? --help         Displays this message
-			-v --version        Displays version info
+			-h ? --help         		Displays this message
+			-v --version        		Displays version info
 
 	cog new [name]
 
 		Creates a new project with a project.cfg and main.cpp file in a new directory.
 		If name is given, that is used for the project and folder name
 
+	cog build [cog options...]
 	cog run [cog options...] -- [project options...]
 
 		Looks for a project.cfg file, builds the project, and runs it
 		Cog Options:
-			-r --release        Do not set the DEBUG macro
+			-r --release        		Do not set the DEBUG macro and force rebuild
+			-x --no-default-features	Disable any default project features
+			-F <V> --feature <V>		Enables project feature V and any dependencies
 		Project Options:
 			Any arguments placed after -- are sent to the target project instead of being interpreted by cog
 )""", VERSION);
