@@ -214,44 +214,94 @@ void build(const bool DEBUG, const configstring::ConfigObject CONFIG) {
 	// Look for feature flags (done after reading all packages to ignore order)
 	struct Feature {
 		bool enabled = true;
-		vector<string> requires;
+		/// @brief Circular features allowed, used in BFS
+		bool visited = false;
+		/// @brief Features or packages this depends on
+		vector<string> dependencies;
 	};
-	map<string, Feature> features;
+
+	// Each Feature will be freed when features goes out of scope
+	map<string, Feature*> features;
 	for(const string KEY : CONFIG.keys()) {
 		const bool
 			IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
 			IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8+9 && KEY.substr(KEY.length()-9) == ".required";
 		if(IS_FEATURE_DTL) {
 			const string FEATURE_NAME = KEY.substr(0,KEY.length()-9);
-			Feature fallback;
-			Feature& feature = fallback;
+			Feature* pFeature;
 			auto iter = features.find(FEATURE_NAME);
 			if(iter != features.end()) {
-				feature = iter->second;
+				pFeature = iter->second;
 			} else {
-				features.insert({FEATURE_NAME, feature});
+				pFeature = new Feature;
+				features.insert({FEATURE_NAME, pFeature});
 			}
 
 			string value = "";
 			get_string_from_config(CONFIG,KEY,value);
-			for(const string ENTRY : configstring::stringlib::str_split(value, (const char)',')) {
-				feature.requires.push_back(configstring::stringlib::str_trim(ENTRY));
+			for(const string ITEM : configstring::stringlib::str_split(value, (const char)',')) {
+				pFeature->dependencies.push_back(configstring::stringlib::str_trim(ITEM));
 			}
 		} else if(IS_FEATURE) {
-			Feature fallback;
-			Feature& feature = fallback;
+			Feature* pFeature;
 			auto iter = features.find(KEY);
 			if(iter != features.end()) {
-				feature = iter->second;
+				pFeature = iter->second;
 			} else {
-				features.insert({KEY, feature});
+				pFeature = new Feature;
+				features.insert({KEY, pFeature});
 			}
-			get_optional_bool_from_config(CONFIG, KEY, feature.enabled);
+
+			if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
+			else get_optional_bool_from_config(CONFIG, KEY, pFeature->enabled);
 		}
 	}
 
-	for(auto const& [key, val] : features) {
-		printf("Feature %s %i %i", key.c_str(), val.enabled, val.requires.size());
+	queue<string> featuresToEnable;
+
+	// Add default features
+	for(auto const& [KEY, P_feature] : features) {
+		if(P_feature->enabled) {
+			featuresToEnable.push(KEY);
+		}
+	}
+
+
+	// BFS to enable features and optional packages
+	while(!featuresToEnable.empty()) {
+		const string NEXT = featuresToEnable.front();
+		auto iter = features.find(NEXT);
+		Feature *pFeature;
+
+		if(iter != features.end()) {
+			pFeature = iter->second;
+		} else {
+			throw runtime_error(format("Cannot enable feature %s since it does not exist", NEXT.c_str()));
+		}
+		featuresToEnable.pop();
+
+		if(pFeature->visited) {
+			continue;
+		} else {
+			pFeature->visited = true;
+		}
+
+		pFeature->enabled = true;
+
+		for(const string ITEM : pFeature->dependencies) {
+			if(ITEM.length() > 4 && ITEM.rfind("pkg.",0) == 0) {
+				auto iter = find_if(packages.begin(), packages.end(), [ITEM](const Pkg& PKG) { return PKG.name == ITEM.substr(4); });
+				if(iter == packages.end()) {
+					throw runtime_error(format("Cannot require package \"%s\" since is not specified", commands::escape_quotes(ITEM).c_str()));
+				} else {
+					iter->required = true;
+				}
+			} else if(ITEM.length() > 8 && ITEM.rfind("feature.",0) == 0) {
+				featuresToEnable.push(ITEM);
+			} else {
+				throw runtime_error(format("Unexpected entry \"%s\" in \"%s.required\"", commands::escape_quotes(ITEM).c_str(), commands::escape_quotes(NEXT).c_str()));
+			}
+		}
 	}
 
 	packages.erase(
