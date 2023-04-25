@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <regex>
 
 #include "console.hpp"
 #include "formatting.h"
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
 			printlnf("Features declared by %s:", projectName.c_str());
 
 			bool hasAny = false;
+			regex featurePattern("^feature.([A-Z0-9_]+)$");
 			for(const string KEY : CONFIG.keys()) {
 				const bool
 					IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
@@ -106,7 +108,7 @@ int main(int argc, char *argv[]) {
 					IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 6 && KEY.substr(KEY.length() - 6) == ".notes";
 
 
-				if(IS_FEATURE && !IS_FEATURE_DTL && !IS_FEATURE_NOTE) {
+				if(IS_FEATURE && !IS_FEATURE_DTL && !IS_FEATURE_NOTE && regex_match(KEY, featurePattern)) {
 					hasAny = true;
 					
 					string notes = "";
