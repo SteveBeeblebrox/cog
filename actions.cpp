@@ -54,7 +54,13 @@ project.author=You!;
 # Package Dependencies;
 #pkg.libR=1.0;
 #pkg.zlib>=2.0;
-#pkg.libpcre2-8;
+#pkg.prettyprint;
+
+# Feature Flags;
+#feature.LOGGING=true;
+#feature.ANSI_COLORS=false;
+#feature.ANSI_COLORS.notes=Enables Console Formatting;
+#feature.ANSI_COLORS.required=feature.LOGGING,pkg.prettyprint;
 )""", NAME.c_str()));
 
 	files::mkdir(NAME + "/src");
