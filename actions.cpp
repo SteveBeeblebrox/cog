@@ -89,7 +89,7 @@ std::string get_make_dependencies(const FILESYSTEM_NAMESPACE::path FILE) {
 		const fs::path NEXT = dependencies.front();
 		dependencies.pop();
 
-		ifstream file(NEXT);
+		ifstream file(NEXT.string());
 		if(file.fail()) {
 			eprintlnf("%sCould not access file %s%s", colors::YELLOW, NEXT.string().c_str(), colors::REVERT);
 			continue;
