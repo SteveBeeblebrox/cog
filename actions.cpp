@@ -281,10 +281,10 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 					features.insert({KEY, pFeature});
 				}
 
-				pFeature->enabled = DEFAULT_FEATURES;
-
 				if(const auto VALUE = CONFIG.get(KEY)->as<configstring::Null>());
 				else get_optional_bool_from_config(CONFIG, KEY, pFeature->enabled);
+
+				pFeature->enabled = pFeature->enabled && DEFAULT_FEATURES;
 			}
 		}
 
