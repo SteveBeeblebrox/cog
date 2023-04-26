@@ -44,13 +44,13 @@ namespace configstring {
     };
 
     // Note, Null has no value so it does not need to extend ValueTemplateBase
-    class Null: public Value {
+    class Null final: public Value {
         public:
             /// @brief Get the value of this Null in a writable form
             std::string stringify() const override;
     };
 
-    class Number: public ValueTemplateBase<double> {
+    class Number final: public ValueTemplateBase<double> {
         public:
             /// @brief Creates a number with value 0
             Number();
@@ -62,7 +62,7 @@ namespace configstring {
             std::string stringify() const override;
     };
 
-    class Boolean: public ValueTemplateBase<bool> {
+    class Boolean final: public ValueTemplateBase<bool> {
         public:
              /// @brief Creates a boolean with value false
             Boolean();
@@ -74,7 +74,7 @@ namespace configstring {
             std::string stringify() const override;
     };
 
-    class String: public ValueTemplateBase<std::string> {
+    class String final: public ValueTemplateBase<std::string> {
         public:
             /// @brief Creates an empty String
             String();
