@@ -3,7 +3,7 @@
 
 #ifdef USE_EXPR_FILESYSTEM
 #include <experimental/filesystem>
-#define FILESYSTEM_NAMESPACE std::filesystem::experimental
+#define FILESYSTEM_NAMESPACE std::experimental::filesystem
 #else
 #include <filesystem>
 #define FILESYSTEM_NAMESPACE std::filesystem
