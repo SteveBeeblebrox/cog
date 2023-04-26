@@ -29,7 +29,7 @@ endif
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CXX) $(LFLAGS) -o $@ $^
+	$(CXX) -o $@ $^ $(LFLAGS)
 
 .cpp.o:
 	$(CXX) $(CFLAGS) -o $@ -c $<
