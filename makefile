@@ -56,4 +56,4 @@ main.o: main.cpp console.hpp formatting.h version.h actions.h \
  filesystem.h confighelper.h configstring/configstring.h \
  configstring/stringlib.h configstring/classes/values.hpp \
  configstring/classes/ConfigObject.h configstring/classes/values.hpp \
- third_party/matchOS.h
+ files.h third_party/matchOS.h

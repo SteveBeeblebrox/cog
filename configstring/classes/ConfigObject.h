@@ -7,6 +7,7 @@
 #include "values.hpp"
 
 namespace configstring {
+    /// @brief A map of string keys and Values; all Values should be free store allocated and will automatically be deleted when the ConfigObject goes out of scope
     class ConfigObject {
         private:
             /// @brief List of keys

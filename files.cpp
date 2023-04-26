@@ -41,4 +41,17 @@ namespace files {
 
         return buffer.str();
     }
+
+    /// @brief Returns true if NAME exists and is a file, false otherwise
+    bool fexists(const std::string NAME) {
+        return !fs::is_directory(NAME) && fs::exists(NAME);
+    }
+
+    /// @brief Throws an error if NAME contains null or / (Some platforms may enforce additional rules not checked here)
+    void validate_fname(const std::string NAME) {
+        // String literals/const char* break with a null in them
+        if(NAME.find_first_of(string("/") + '\0') != string::npos) {
+            throw runtime_error(format("Invalid file name \"%s\"", commands::escape_quotes(NAME).c_str()));
+        }
+    }
 }

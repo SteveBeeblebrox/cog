@@ -6,6 +6,7 @@
 #include "formatting.h"
 #include "version.h"
 #include "actions.h"
+#include "files.h"
 
 #include "third_party/matchOS.h"
 
@@ -96,25 +97,27 @@ int main(int argc, char *argv[]) {
 
 			string projectName;
 			get_string_from_config(CONFIG, "project.name", projectName);
+			files::validate_fname(projectName);
 
 			printlnf("Features declared by %s:", projectName.c_str());
 
 			bool hasAny = false;
-			regex featurePattern("^feature.([A-Z0-9_]+)$");
+			const string FEATURE_PREFIX = "feature.", FEATURE_NOTE_SUFFIX = ".notes", FEATURE_REQUIRED_SUFFIX = ".required";
+			regex featurePattern(format("^%s([A-Z0-9_]+)$", FEATURE_PREFIX.c_str()));
 			for(const string KEY : CONFIG.keys()) {
 				const bool
-					IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
-					IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
-					IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 6 && KEY.substr(KEY.length() - 6) == ".notes";
+					IS_FEATURE = KEY.length() > FEATURE_PREFIX.length() && KEY.rfind(FEATURE_PREFIX,0) == 0,
+					IS_FEATURE_DTL = IS_FEATURE && KEY.length() > FEATURE_PREFIX.length() + FEATURE_REQUIRED_SUFFIX.length() && KEY.substr(KEY.length() - FEATURE_REQUIRED_SUFFIX.length()) == FEATURE_REQUIRED_SUFFIX,
+					IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > FEATURE_PREFIX.length() + FEATURE_NOTE_SUFFIX.length() && KEY.substr(KEY.length() - FEATURE_NOTE_SUFFIX.length()) == FEATURE_NOTE_SUFFIX;
 
 
 				if(IS_FEATURE && !IS_FEATURE_DTL && !IS_FEATURE_NOTE && regex_match(KEY, featurePattern)) {
 					hasAny = true;
 					
 					string notes = "";
-					if(CONFIG.has(KEY + ".notes")) {
-						if(const auto VALUE = CONFIG.get(KEY + ".notes")->as<configstring::Null>());
-						else get_optional_string_from_config(CONFIG , KEY + ".notes", notes);
+					if(CONFIG.has(KEY + FEATURE_NOTE_SUFFIX)) {
+						if(const auto VALUE = CONFIG.get(KEY + FEATURE_NOTE_SUFFIX)->as<configstring::Null>());
+						else get_optional_string_from_config(CONFIG , KEY + FEATURE_NOTE_SUFFIX, notes);
 					}
 
 					bool defaultValue = true;

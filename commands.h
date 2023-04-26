@@ -14,7 +14,9 @@ namespace commands {
     CommandResult run_and_read(const std::string COMMAND, const std::vector<std::string> ARGS = std::vector<std::string>());
     /// @brief Check that command COMMAND can be run by checking that COMMAND --version exists with code 0
     void assert_command_exists(const std::string COMMAND, const std::string WHICH_KEY, const std::string ARG = "--version");
-    /// @brief Excapes " -> \\" (One literal backslash and one quote)
+    /// @brief Escapes " -> \\" (One literal backslash and one quote)
     std::string escape_quotes(const std::string ARG);
+    /// @brief Escapes <space> -> \\<space> (One literal backslash and one space)
+    std::string escape_spaces(const std::string ARG);
 }
 #endif

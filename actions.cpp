@@ -30,6 +30,8 @@ namespace fs = FILESYSTEM_NAMESPACE;
 
 /// @brief Make a new project called NAME in a new folder called NAME. A default main.cpp and project.cfg is generated
 void create_new_project(const std::string NAME) {
+	files::validate_fname(NAME);
+
 	printlnf("%s%sCreating project \"%s\"%s%s", fmt::ITALIC, colors::CYAN, NAME.c_str(), colors::REVERT, fmt::REVERT_ITALIC);
 				
 	files::mkdir(NAME);
@@ -163,11 +165,12 @@ Usage:
 /// @brief Build the project from the given config settings and set debug mode (defines the DEBUG macro for the project if true)
 void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::string> FEATURES, const configstring::ConfigObject CONFIG) {
 	files::mkdir("build");
-	
+
 	// Get project settings
 	// version and author can be omitted while name is required
 	string projectName, projectVersion = "1.0", projectAuthor = "anonymous";
 	get_string_from_config(CONFIG, "project.name", projectName);
+	files::validate_fname(projectName);
 	get_optional_version_from_config(CONFIG, "project.version", projectVersion);
 	get_optional_string_from_config(CONFIG, "project.author", projectAuthor);
 
@@ -192,13 +195,12 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		string name;
 		/// @brief One of =, <=, >=
 		string relation = "=";
-		/// @brief version, * for any
+		/// @brief Version, * for any
 		string version = "*";
 		///@brief Features can make optional packages required
 		bool required = true;
 	};
 
-	// Look for third party dependencies in project.cfg; if found, require pkg-config command
 	vector<Pkg> packages;
 	regex pkgPatternLG("^pkg\\??.([a-zA-Z0-9+_-]+)(<|>)$");
 	regex pkgPatternSimple("^pkg\\??.([a-zA-Z0-9+_-]+)$");
@@ -212,19 +214,20 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		vector<string> dependencies;
 	};
 
-	// Look for feature flags (done after reading all packages to ignore order)
 	map<string, Feature*> features;
-	regex featurePattern("^feature.([A-Z0-9_]+)(.required)?$");
 	string featureFlags = "";
 
+	// Read in features and third party packages from config
 	try {
+		const string PKG_PREFIX = "pkg.", OPTIONAL_PKG_PREFIX = "pkg?.", FEATURE_PREFIX = "feature.", FEATURE_NOTE_SUFFIX = ".notes", FEATURE_REQUIRED_SUFFIX = ".required";
+		regex featurePattern(format("^%s([A-Z0-9_]+)(%s)?$", FEATURE_PREFIX.c_str(), FEATURE_REQUIRED_SUFFIX.c_str()));
 		for(const string KEY : CONFIG.keys()) {
 			const bool
-				IS_PACKAGE = KEY.length() > 4 && KEY.rfind("pkg.",0) == 0,
-				IS_OPTIONAL_PACKAGE = KEY.length() > 5 && KEY.rfind("pkg?.",0) == 0,
-				IS_FEATURE = KEY.length() > 8 && KEY.rfind("feature.",0) == 0,
-				IS_FEATURE_DTL = IS_FEATURE && KEY.length() > 8 + 9 && KEY.substr(KEY.length() - 9) == ".required",
-				IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > 8 + 6 && KEY.substr(KEY.length() - 6) == ".notes";
+				IS_PACKAGE = KEY.length() > PKG_PREFIX.length() && KEY.rfind(PKG_PREFIX,0) == 0,
+				IS_OPTIONAL_PACKAGE = KEY.length() > OPTIONAL_PKG_PREFIX.length() && KEY.rfind(OPTIONAL_PKG_PREFIX,0) == 0,
+				IS_FEATURE = KEY.length() > FEATURE_PREFIX.length() && KEY.rfind(FEATURE_PREFIX,0) == 0,
+				IS_FEATURE_DTL = IS_FEATURE && KEY.length() > FEATURE_PREFIX.length() + FEATURE_REQUIRED_SUFFIX.length() && KEY.substr(KEY.length() - FEATURE_REQUIRED_SUFFIX.length()) == FEATURE_REQUIRED_SUFFIX,
+				IS_FEATURE_NOTE = IS_FEATURE && KEY.length() > FEATURE_PREFIX.length() + FEATURE_NOTE_SUFFIX.length() && KEY.substr(KEY.length() - FEATURE_NOTE_SUFFIX.length()) == FEATURE_NOTE_SUFFIX;
 			if(IS_PACKAGE || IS_OPTIONAL_PACKAGE) {
 				Pkg pkg;
 				if(regex_search(KEY, matches, pkgPatternLG)) {
@@ -350,11 +353,53 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		throw ERR;
 	}
 
+	bool forceRebuild = false || !DEBUG;
+
+	// Lock management to check if forced rebuild is needed
+	{
+		const string LOCK_FILE = "build/project.lock";
+		const string PROJECT_LOCK_KEY = "project.identity";
+		const string FEATURE_LOCK_KEY = "features.identity";
+		
+		configstring::ConfigObject lockConfig;
+		if(files::fexists(LOCK_FILE)) {
+			lockConfig = configstring::parse(files::fread(LOCK_FILE));
+		}
+
+		string currentProjectHash = format("%x",hash<string>{}(files::fread(get_config_filename())));
+		string oldProjectFileHash = "";
+		get_optional_string_from_config(lockConfig,PROJECT_LOCK_KEY,oldProjectFileHash);
+
+		string currentFeatureHash = format("%x",hash<string>{}(featureFlags));
+		string oldFeatureHash = "";
+		get_optional_string_from_config(lockConfig,FEATURE_LOCK_KEY,oldFeatureHash);
+		
+		// If project.cfg changes, force a rebuild and update lock
+		if(oldProjectFileHash != currentProjectHash) {
+			forceRebuild = true;
+			lockConfig.set(PROJECT_LOCK_KEY, new configstring::String(currentProjectHash));
+		}
+
+		// If features change, force a rebuild and update lock
+		if(oldFeatureHash != currentFeatureHash) {
+			forceRebuild = true;
+			lockConfig.set(FEATURE_LOCK_KEY, new configstring::String(currentFeatureHash));
+		}
+
+		// Update lock file
+		files::fwrite(LOCK_FILE, lockConfig.stringify());
+		
+		// lockConfig will automatically delete its values when it goes out of scope
+	}
+
+
+	// Remove unneeded packages
 	packages.erase(
 		remove_if(packages.begin(), packages.end(), [](const Pkg PKG) { return !PKG.required; }),
 		packages.end()
 	);
 
+	// Get required package info
 	string pkgLinkFlags = "", pkgCompileFlags = "";
 	if(packages.size() > 0) {
 		commands::assert_command_exists(whichPkgConfig, "pkg-config");
@@ -396,7 +441,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 	}
 
 	string dependencyRules = "", srcFiles = "";
-	// Find all compilable c++ files
+	// Find all compilable c++ files and generate dependencies
 	for(const auto &entry : fs::recursive_directory_iterator("src")) {
 		if(!fs::is_directory(entry)) {
 			const auto PATH = entry.path();
@@ -409,7 +454,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 
 	files::fwrite("build/makefile",
 string("# autogenerated makefile\n")
-+ "TARGET = build/" + projectName + "\n"
++ "TARGET = \"build/" + commands::escape_spaces(commands::escape_quotes(projectName)) + "\"\n"
 + "SRC_FILES = " + configstring::stringlib::str_trim(srcFiles) + "\n"
 + "CXX = " + whichCPP + "\n"
 + format("CFLAGS = -std=c++%i -Wall%s -g -std=c++17 -DPROJECT_NAME=\"\\\"%s\\\"\" -DPROJECT_VERSION=\"\\\"%s\\\"\" -DPROJECT_AUTHOR=\"\\\"%s\\\"\"", (int)cppVersion, (cppStrict ? " -Werror -Wpedantic" : ""), commands::escape_quotes(commands::escape_quotes(projectName)).c_str(), commands::escape_quotes(commands::escape_quotes(projectVersion)).c_str(), commands::escape_quotes(commands::escape_quotes(projectAuthor)).c_str()) + featureFlags + " " + R"""(
@@ -418,7 +463,7 @@ OBJECTS = $(patsubst src/%.cpp,build/%.o,${SRC_FILES})
 ifeq ($(shell echo "Windows"), "Windows")
 	TARGET := $(TARGET).exe
 endif
-)""" + MAKE_MATCH_OS+ R"""(
+)""" + MAKE_MATCH_OS + R"""(
 
 all: $(TARGET)
 
@@ -431,7 +476,7 @@ build/%.o: src/%.cpp
 )""" + dependencyRules);
 
 	vector<string> args = {"--makefile=build/makefile", "--silent"};
-	if(!DEBUG) {
+	if(forceRebuild) {
 		args.push_back("--always-make");
 	}
 
@@ -457,5 +502,5 @@ void run(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std::s
 
 	eprintlnf("%s%sRunning project %s:%s%s", fmt::ITALIC, colors::CYAN, name.c_str(), colors::REVERT, fmt::REVERT_ITALIC);
 	
-	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run(format(".%cbuild%c%s", CMD_PATH_SEPARATOR, CMD_PATH_SEPARATOR, name.c_str()), ARGS), colors::REVERT, fmt::REVERT_ITALIC);
+	eprintlnf("%s%sProject exited with code %i%s%s", fmt::ITALIC, colors::CYAN, commands::run(format(".%cbuild%c\"%s\"", CMD_PATH_SEPARATOR, CMD_PATH_SEPARATOR, commands::escape_quotes(name).c_str()), ARGS), colors::REVERT, fmt::REVERT_ITALIC);
 }

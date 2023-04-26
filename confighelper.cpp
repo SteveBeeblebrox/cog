@@ -13,14 +13,14 @@ using namespace std;
 
 namespace fs = FILESYSTEM_NAMESPACE;
 
-/// @brief Load project config from a Project.config falling back to Project.cfg, project.config, and project.cfg in that order
+/// @brief If project.config exists, returns that otherwise returns project.cfg
+std::string get_config_filename() {
+	return files::fexists("project.config") ? "project.config" : "project.cfg";
+}
+
+/// @brief Load project config from project.config or and project.cfg in that order
 configstring::ConfigObject get_config() {
-	return configstring::parse(
-		fs::exists("Project.config") ? files::fread("Project.config")
-		: fs::exists("Project.cfg") ? files::fread("Project.cfg")
-		: fs::exists("project.config") ? files::fread("project.config")
-		: files::fread("project.cfg")
-	);
+	return configstring::parse(files::fread(get_config_filename()));
 }
 
 /// @brief If KEY exists, get KEY from CONFIG as a string or throw an error

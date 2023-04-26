@@ -5,7 +5,10 @@
 
 #include "configstring/configstring.h"
 
-/// @brief Load project config from a Project.config falling back to Project.cfg, project.config, and project.cfg in that order
+/// @brief If project.config exists, returns that otherwise returns project.cfg
+std::string get_config_filename();
+
+/// @brief Load project config from project.config or and project.cfg in that order
 configstring::ConfigObject get_config() ;
 
 /// @brief If KEY exists, get KEY from CONFIG as a string or throw an error

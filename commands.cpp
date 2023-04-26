@@ -55,8 +55,13 @@ namespace commands {
             throw runtime_error(format("Command \"%s\" does not exist. Either set which.%s in project.cfg or install %s", COMMAND.c_str(), WHICH_KEY.c_str(), COMMAND.c_str()));
         }
     }
-    /// @brief Excapes " -> \\" (One literal backslash and one quote)
+    /// @brief Escapes " -> \\" (One literal backslash and one quote)
     std::string escape_quotes(const std::string ARG) {
         return configstring::stringlib::str_replace(ARG,"\"","\\\"");
+    }
+
+    /// @brief Escapes <space> -> \\<space> (One literal backslash and one space)
+    std::string escape_spaces(const std::string ARG) {
+        return configstring::stringlib::str_replace(ARG," ","\\ ");
     }
 }

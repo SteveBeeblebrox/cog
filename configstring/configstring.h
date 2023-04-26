@@ -1,5 +1,5 @@
 #ifndef CONFIGSTRING_HPP
-#define CONFIGSTRINGT_HPP
+#define CONFIGSTRING_HPP
 
 #include <string>
 #include <vector>

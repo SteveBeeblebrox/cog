@@ -11,5 +11,11 @@ namespace files {
     
     /// @brief Opens a file, reads it in its entirety to a string, and closes the file
     std::string fread(const std::string NAME);
+
+    /// @brief Returns true if NAME exists and is a file, false otherwise
+    bool fexists(const std::string NAME);
+
+   /// @brief Throws an error if NAME contains NUL or / (Some platforms may enforce additional rules not checked here)
+    void validate_fname(const std::string NAME);
 }
 #endif
