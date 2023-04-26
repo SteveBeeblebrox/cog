@@ -149,6 +149,10 @@ Usage:
 		Creates a new project with a project.cfg and main.cpp file in a new directory.
 		If name is given, that is used for the project and folder name
 
+	cog features
+	
+		Show a table of features supported by the current project
+
 	cog build [cog options...]
 	cog run [cog options...] -- [project options...]
 
