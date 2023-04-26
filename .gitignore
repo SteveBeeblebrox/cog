@@ -1,4 +1,5 @@
 test
 *.o
 cog
+cog.exe
 .vscode
