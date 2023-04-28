@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 			bool hasAny = false;
 			const string FEATURE_PREFIX = "feature.", FEATURE_NOTE_SUFFIX = ".notes", FEATURE_REQUIRED_SUFFIX = ".required";
 			regex featurePattern(format("^%s([A-Z0-9_]+)$", FEATURE_PREFIX.c_str()));
-			for(const string KEY : CONFIG.keys()) {
+			for(const string &KEY : CONFIG.keys()) {
 				const bool
 					IS_FEATURE = KEY.length() > FEATURE_PREFIX.length() && KEY.rfind(FEATURE_PREFIX,0) == 0,
 					IS_FEATURE_DTL = IS_FEATURE && KEY.length() > FEATURE_PREFIX.length() + FEATURE_REQUIRED_SUFFIX.length() && KEY.substr(KEY.length() - FEATURE_REQUIRED_SUFFIX.length()) == FEATURE_REQUIRED_SUFFIX,

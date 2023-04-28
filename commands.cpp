@@ -21,7 +21,7 @@ namespace commands {
     /// @brief Run COMMAND with ARGS and return exit code (stdout is written to console)
     int run(const std::string COMMAND, const std::vector<std::string> ARGS) {
         string tail = "";
-        for(const auto ARG : ARGS) {
+        for(const auto &ARG : ARGS) {
             tail += format(" \"%s\"", escape_quotes(ARG).c_str());
         }
         return system(format("%s%s", COMMAND.c_str(), tail.c_str()).c_str());
@@ -29,7 +29,7 @@ namespace commands {
     /// @brief Run COMMAND with ARGS and return exit code and command stdout (stdout is not written to console)
     CommandResult run_and_read(const std::string COMMAND, const std::vector<std::string> ARGS) {
         string tail = "";
-        for(const auto ARG : ARGS) {
+        for(const auto &ARG : ARGS) {
             tail += format(" \"%s\"", escape_quotes(ARG).c_str());
         }
         

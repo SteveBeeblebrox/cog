@@ -225,7 +225,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 	try {
 		const string PKG_PREFIX = "pkg.", OPTIONAL_PKG_PREFIX = "pkg?.", FEATURE_PREFIX = "feature.", FEATURE_NOTE_SUFFIX = ".notes", FEATURE_REQUIRED_SUFFIX = ".required";
 		regex featurePattern(format("^%s([A-Z0-9_]+)(%s)?$", FEATURE_PREFIX.c_str(), FEATURE_REQUIRED_SUFFIX.c_str()));
-		for(const string KEY : CONFIG.keys()) {
+		for(const string &KEY : CONFIG.keys()) {
 			const bool
 				IS_PACKAGE = KEY.length() > PKG_PREFIX.length() && KEY.rfind(PKG_PREFIX,0) == 0,
 				IS_OPTIONAL_PACKAGE = KEY.length() > OPTIONAL_PKG_PREFIX.length() && KEY.rfind(OPTIONAL_PKG_PREFIX,0) == 0,
@@ -268,7 +268,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 
 				string value = "";
 				get_string_from_config(CONFIG,KEY,value);
-				for(const string ITEM : configstring::stringlib::str_split(value, (const char)',')) {
+				for(const string &ITEM : configstring::stringlib::str_split(value, (const char)',')) {
 					pFeature->dependencies.push_back(configstring::stringlib::str_trim(ITEM));
 				}
 			} else if(IS_FEATURE && !IS_FEATURE_NOTE) {
@@ -294,7 +294,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 
 		queue<string> featuresToEnable;
 
-		for(const string FEATURE : FEATURES) {
+		for(const string &FEATURE : FEATURES) {
 			featuresToEnable.push("feature." + FEATURE);
 		}
 
@@ -326,7 +326,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 
 			pFeature->enabled = true;
 
-			for(const string ITEM : pFeature->dependencies) {
+			for(const string &ITEM : pFeature->dependencies) {
 				if(ITEM.length() > 4 && ITEM.rfind("pkg.",0) == 0) {
 					auto iter = find_if(packages.begin(), packages.end(), [ITEM](const Pkg& PKG) { return PKG.name == ITEM.substr(4); });
 					if(iter == packages.end()) {
@@ -423,7 +423,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		vector<string> pkgConfigCompileArgs;
 		vector<string> pkgConfigLinkArgs;
 
-		for(const Pkg PKG : packages) {
+		for(const Pkg &PKG : packages) {
 			if(PKG.version != "*") {
 				pkgConfigCompileArgs.push_back(format("%s %s %s", PKG.name.c_str(), PKG.relation.c_str(), PKG.version.c_str()));
 			} else {
