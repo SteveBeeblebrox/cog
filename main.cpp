@@ -26,6 +26,19 @@ void warn_unexpected_argument(const string ARG) {
 	warn_unexpected_argument(ARG.c_str());
 }
 
+/// @brief A simple hash function, not cryptographically secure
+size_t cyrb(string text, size_t seed = 0) {
+    size_t h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (size_t i = 0; i < text.length(); i++) {
+        char ch = text.at(i);
+        h1 = (h1 ^ ch) * 2654435761;
+        h2 = (h2 ^ ch) * 1597334677;
+    }
+    h1 = ((h1 ^ (h1>>16)) * 2246822507) ^ ((h2 ^ (h2>>13)) * 3266489909);
+    h2 = ((h2 ^ (h2>>16)) * 2246822507) ^ ((h1 ^ (h1>>13)) * 3266489909);
+    return (h2<<16) | h1;
+}
+
 int main(int argc, char *argv[]) {
 	try {
 		if(argc < 2) {
@@ -131,6 +144,8 @@ int main(int argc, char *argv[]) {
 			if(!hasAny) {
 				printlnf("\t(None)", "");
 			}
+		} else if(format("%x", cyrb(ARG,2003)) == "76deea20") {
+			printlnf(" /\\_/\\\n(>^.^<)\n(      ￣)/\n UU￣￣UU","");
 		} else {
 			warn_unexpected_argument(ARG);
 		}
