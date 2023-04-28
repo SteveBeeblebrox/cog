@@ -364,6 +364,7 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		const string LOCK_FILE = "build/project.lock";
 		const string PROJECT_LOCK_KEY = "project.identity";
 		const string FEATURE_LOCK_KEY = "features.identity";
+		const string RELEASE_LOCK_KEY = "release.identity";
 		
 		configstring::ConfigObject lockConfig;
 		if(files::fexists(LOCK_FILE)) {
@@ -378,6 +379,9 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		string oldFeatureHash = "";
 		get_optional_string_from_config(lockConfig,FEATURE_LOCK_KEY,oldFeatureHash);
 		
+		bool wasRelease = false;
+		get_optional_bool_from_config(lockConfig,RELEASE_LOCK_KEY,wasRelease);
+
 		// If project.cfg changes, force a rebuild and update lock
 		if(oldProjectFileHash != currentProjectHash) {
 			forceRebuild = true;
@@ -388,6 +392,12 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 		if(oldFeatureHash != currentFeatureHash) {
 			forceRebuild = true;
 			lockConfig.set(FEATURE_LOCK_KEY, new configstring::String(currentFeatureHash));
+		}
+
+		// If build mode change, force a rebuild and update lock
+		if(wasRelease != !DEBUG) {
+			forceRebuild = true;
+			lockConfig.set(FEATURE_LOCK_KEY, new configstring::Boolean(!DEBUG));
 		}
 
 		// Update lock file
