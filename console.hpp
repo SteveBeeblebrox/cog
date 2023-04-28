@@ -28,7 +28,7 @@ namespace console {
     }
     namespace {
         template<class T>
-        constexpr std::string from(const T& t)
+        std::string from(const T& t)
         {
             std::stringstream stream;
             stream << t;
