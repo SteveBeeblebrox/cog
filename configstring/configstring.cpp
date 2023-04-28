@@ -34,7 +34,7 @@ namespace configstring {
     /// @brief Parses a full source string into a ConfigObject with typed values
     ConfigObject parse(const std::string& TEXT) {
         ConfigObject result;
-        for(const std::string ENTRY : str_split(TEXT, (const char)';')) {
+        for(const std::string &ENTRY : str_split(TEXT, (const char)';')) {
             if(!str_is_empty(ENTRY)) {
                 if(str_trim(ENTRY).rfind("#",0) == 0)
                     continue;
