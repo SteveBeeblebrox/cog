@@ -1,6 +1,7 @@
 #include "commands.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string>
 #include <stdexcept>
 #include <vector>
@@ -15,6 +16,8 @@ using namespace console;
 #ifdef WINDOWS
 #define popen _popen
 #define pclose _pclose
+#define getenv _getenv
+#define putenv _putenv
 #endif
 
 namespace commands {
@@ -63,5 +66,26 @@ namespace commands {
     /// @brief Escapes <space> -> \\<space> (One literal backslash and one space)
     std::string escape_spaces(const std::string ARG) {
         return configstring::stringlib::str_replace(ARG," ","\\ ");
+    }
+
+    /// @brief Gets the value of enviornment variable NAME 
+    std::string get_env_var(const std::string NAME) {
+        const char* VALUE = getenv(NAME.c_str());
+        return VALUE == NULL ? std::string("") : std::string(VALUE);
+    }
+
+    /// @brief Sets the value of local enviornment variable NAME to VALUE
+    bool set_env_var(const std::string NAME, const std::string VALUE) {
+        return putenv(
+#ifndef WINDOWS
+            (char*)
+#endif
+            (NAME + "=" + VALUE).c_str()
+        );
+    }
+
+    /// @brief Combines strings to form a path env variable separating entries with ':' (';' on Windows) 
+    std::string concat_path(const std::string PATH) {
+        return PATH;
     }
 }

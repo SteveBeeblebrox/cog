@@ -5,6 +5,9 @@ Like Rust's Cargo but for C++
 ## Overview
 Rust, an alternative to C++ has a tool called Cargo. Cargo handles packages, building, running, publishing, and even more. It's like g++, make, cmake, gdb, pkg-config, apt-get/dpkg all in one. This project is a minimalist implementation of some of those features for C++ to make development easier.
 
+## Compiling Cog
+Build with `make`. Use `make ansif=true` to build cog with support for colored text. Use `make exprfs=true` if you need to support `std::experimental::filesystem` instead of `std::filesystem`.
+
 ## `project.cfg` (Or `project.config`)
 This file holds settings for your program; it's the heart of a cog project just like `makefile` is for a Unix make project or `Cargo.toml` is for Rust.  The general format is `key=value;` or `#Comment;`. Note that comments must end with a `;` too. Values of `true`, `false`, and `null` are treated specially as are any numeric value. Strings don't have to be quoted unless they are one of the previous special values. Values can be omitted if you want to go with the default (e.g. just `key;`)
 
@@ -43,7 +46,7 @@ pkg.libjpeg>="3.0"
 pkg?.libR;
 ```
 
-These entries follow the format `pkg.[name]=[version];`. Version should be a SemVer string, e.g. `"1.0.0"`. If no version is specified, the first one found will be used. Instead of `=`, you may also use `<=` or `>=` to provide maximum or minimum versions acceptable respectively. Note that not all packages are supported; cog can only find those with a `*.pc` entry in the system. Use the command `pkg-config --list-all` to see what is avalible on your system. After specifying a package dependency, you may include those files in your program with no further action needed. To add an optional dependency, use `pkg?.[name]` (more on this later).
+These entries follow the format `pkg.[name]=[version];`. Version should be a SemVer string, e.g. `"1.0.0"`. If no version is specified, the first one found will be used. Instead of `=`, you may also use `<=` or `>=` to provide maximum or minimum versions acceptable respectively. Note that not all packages are supported; cog can only find those with a `*.pc` entry in the system (You can add these in a `packages` directory next to `project.config` or in the OS specific folders). Use the command `pkg-config --list-all` to see what is avalible on your system. After specifying a package dependency, you may include those files in your program with no further action needed. To add an optional dependency, use `pkg?.[name]` (more on this later).
 
 The final set of values that can be placed in the project config are the `feature.xxx` variables:
 

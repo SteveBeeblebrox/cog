@@ -441,6 +441,9 @@ void build(const bool DEBUG, const bool DEFAULT_FEATURES, const std::vector<std:
 			pkgConfigLinkArgs.push_back("--static");
 		}
 
+		const string PKG_CONFIG_PATH = "PKG_CONFIG_PATH";
+		commands::set_env_var(PKG_CONFIG_PATH, commands::concat_path(commands::get_env_var(PKG_CONFIG_PATH), "packages"));
+
 		const auto PKG_CONFIG_COMPILE_RESULT = commands::run_and_read(whichPkgConfig, pkgConfigCompileArgs);
 		if(PKG_CONFIG_COMPILE_RESULT.status != 0) {
 			throw runtime_error("Error finding one or more packages");
