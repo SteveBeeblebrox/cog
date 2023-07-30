@@ -1,11 +1,11 @@
 #include "commands.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <stdexcept>
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 #include "console.hpp"
 #include "configstring/stringlib.h"
@@ -16,8 +16,26 @@ using namespace console;
 #ifdef WINDOWS
 #define popen _popen
 #define pclose _pclose
-#define getenv _getenv
-#define putenv _putenv
+
+#include <errno.h>
+#include "winbase.h"
+/// @brief Polyfill for setenv on Windows
+int setenv(const char *NAME, const char *VALUE, int overwrite)
+{
+    if(!overwrite) {
+        size_t envsize = 0;
+        if(errno = getenv_s(&envsize, NULL, 0, NAME))
+            return -1;
+
+        if(envsize != 0)
+            return 0;
+    }
+
+    if(errno = _putenv_s(NAME, VALUE))
+        return -1;
+
+    return 0;
+}
 #endif
 
 namespace commands {
@@ -76,12 +94,7 @@ namespace commands {
 
     /// @brief Sets the value of local enviornment variable NAME to VALUE
     bool set_env_var(const std::string NAME, const std::string VALUE) {
-        return putenv(
-#ifndef WINDOWS
-            (char*)
-#endif
-            (NAME + "=" + VALUE).c_str()
-        );
+        return setenv(NAME.c_str(), VALUE.c_str(), 1);
     }
 
     /// @brief Combines strings to form a path env variable separating entries with ':' (';' on Windows) 
