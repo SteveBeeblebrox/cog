@@ -486,7 +486,7 @@ endif
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	@$(CXX) -o $@ $^)""" + pkgLinkFlags + R"""(
+	@$(CXX) -o $@ $^)""" + (cppStatic ? " -static" : "") + pkgLinkFlags + R"""(
 
 build/%.o: src/%.cpp
 	@$(CXX) $(CFLAGS) -o $@ -c $<)""" + pkgCompileFlags + R"""(
