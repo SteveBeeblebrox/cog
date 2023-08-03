@@ -153,6 +153,11 @@ Usage:
 	
 		Show a table of features supported by the current project
 
+	cog test [tests...]
+
+		Builds and runs the given tests or all tests if none are specified.
+		Cake, and grief counseling, will be available at the conclusion of the test
+
 	cog build [cog options...]
 	cog run [cog options...] -- [project options...]
 

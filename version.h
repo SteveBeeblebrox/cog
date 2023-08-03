@@ -1,4 +1,5 @@
 #ifndef VERSION_H
 #define VERSION_H
-#define VERSION "0.1.2-alpha"
+// https://semver.org/
+#define VERSION "0.1.3-alpha+cake"
 #endif
