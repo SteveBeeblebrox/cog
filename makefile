@@ -1,7 +1,7 @@
 # THE NAME OF THE EXECUTABLE
 TARGET = cog
 
-SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp formatting.cpp third_party/matchOS.cpp confighelper.cpp actions.cpp
+SRC_FILES = configstring/classes/ConfigObject.cpp configstring/classes/values.cpp configstring/stringlib.cpp configstring/configstring.cpp main.cpp files.cpp console.cpp commands.cpp formatting.cpp third_party/matchOS.cpp confighelper.cpp actions.cpp testing_files.cpp
 
 CXX = g++
 CFLAGS = -Wall -g -std=c++17
@@ -42,7 +42,7 @@ actions.o: actions.cpp actions.h filesystem.h confighelper.h \
  configstring/configstring.h configstring/stringlib.h \
  configstring/classes/values.hpp configstring/classes/ConfigObject.h \
  configstring/classes/values.hpp console.hpp files.h commands.h \
- formatting.h version.h third_party/matchOS.h
+ formatting.h version.h third_party/matchOS.h testing_files.h
 commands.o: commands.cpp commands.h console.hpp configstring/stringlib.h
 confighelper.o: confighelper.cpp confighelper.h \
  configstring/configstring.h configstring/stringlib.h \
@@ -57,3 +57,4 @@ main.o: main.cpp console.hpp formatting.h version.h actions.h \
  configstring/stringlib.h configstring/classes/values.hpp \
  configstring/classes/ConfigObject.h configstring/classes/values.hpp \
  files.h third_party/matchOS.h
+testing_files.o: testing_files.h

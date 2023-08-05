@@ -61,14 +61,15 @@ int main(int argc, char *argv[]) {
 			show_help();
 		} else if(ARG == "--version" || ARG == "-v") {
 			printlnf("cog v%s", VERSION);
-		} else if(ARG == "run") {
+		} else if(ARG == "run" || ARG == "test") {
+			const BuildType TYPE = ARG == "test" ? BuildType::TEST : BuildType::NORMAL;
 			vector<string> projectArgs, features;
 			bool debug = true, readingThisArgs = true, defaultFeatures = true;
 			for(int i = 2; i < argc; i++) {
 				const auto ARG_I = string(argv[i]);
 				if(readingThisArgs && ARG_I == "--") {
 					readingThisArgs = false;
-				} else if(readingThisArgs && (ARG_I == "--release" || ARG_I == "-r")) {
+				} else if(readingThisArgs && (ARG_I == "--release" || ARG_I == "-r") && TYPE == BuildType::NORMAL) {
 					debug = false;
 				} else if(readingThisArgs && (ARG_I == "--no-default-features" || ARG_I == "-x")) {
 					defaultFeatures = false;
@@ -84,7 +85,7 @@ int main(int argc, char *argv[]) {
 					projectArgs.push_back(ARG_I);
 				}
 			}
-			run(debug, defaultFeatures, features, projectArgs);
+			run(debug, defaultFeatures, features, projectArgs, TYPE);
 		} else if(ARG == "build") {
 			vector<string> features;
 			bool debug = true, defaultFeatures = true;
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]) {
 					warn_unexpected_argument(ARG_I);
 				}
 			}
-			build(debug, defaultFeatures, features);
+			build(debug, defaultFeatures, features, BuildType::NORMAL);
 		} else if(ARG == "features") {
 			const configstring::ConfigObject CONFIG = get_config();
 
