@@ -47,7 +47,8 @@ void create_new_project(const std::string NAME) {
 
 	files::fwrite(NAME + "/.gitignore",
 R"""(build
-test)"""
+test
+)"""
 	);
 
 	files::fwrite(NAME + "/project.cfg", format(
