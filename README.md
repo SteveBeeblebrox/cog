@@ -67,6 +67,16 @@ The next command is `cog features` it prints out a table of the features defined
 
 The next two commands are similar `cog run` and `cog build`. Both compile any changes in your project if needed (e.g. if `project.cfg` changes or if individual source files change). Source files should be located in a `src` directory next to `project.cfg`. `run` and `build` can be given the options `-x` or `--no-default-features` to disable features that `project.cfg` has enabled by default. By default, cog defines the `DEBUG` macro in your program, but the options `-r` or `--release` disable this behavior and force a complete rebuild. The options `-F NAME` or `--feature NAME` will enabled feature `NAME` even if the `-x` option disabled it. Use this to enable features via the command line. If built with different features than last time, a complete rebuild will be done. That is the extent of what build does. Run first calls build and then executes your program. The output of compilation can be found in the `build` directory. In order to pass command line arguments to your program and not to `cog run`, use the form `cog run <...cog options> -- <...your program options>`. Many different macros are also defined to help you conditionally compile for different targets.
 
+The command `cog test` injects minimal testing dependencies into your project allowing you to write tests embedded in your source files. When building normally, these tests are stripped out. `--feature` and `--no-default-features` may be used just like a normal build. Testing is done via macros. `TEST(id, body)` defines a test named `id` where `body` can be a single expression or a `{...}` block. If the form `cog test -- [ids...]` is used, only tests with a matching `id` are run. Each test is considered valid if no exception is thrown. Use `TASSERT(expression)` to throw an error if `expression` is false. `TPRINTS(body, message)` asserts that evaluating `body` writes exactly `message` to `std::cout` while `TPRINTMATCHES(body, pattern)` checks that the output matches the regex string `pattern`. A simple test could be written like so:
+```cpp
+int add(int a, int b) {
+	return a + b;
+}
+
+TEST(commutative_add, TASSERT(add(1,2) == add(2,1)));
+```
+Note that when running `cog test`, all `std::cout` is captured; however, `std::err` works like usual. Additionally, `main()` is NOT called. `cog test` is still in development and has only ben tested with `which.cpp=g++`.
+
 Additionally, cog supports a subcommand for super cat powers.
 
 ## Overall Process
@@ -86,5 +96,5 @@ Additionally, cog supports a subcommand for super cat powers.
 8. Testing on other systems (Currently only Debian and MinGW on Windows)
 9. A `build.cpp` file for compile time scripting (And thus `dev.pkg.xxx` dependencies to go with it)
 10. Detect and lock on dependency versions (Expanding `build/project.log`)
-11. Testing (From doc comments maybe?) and debugging (`lldb` or `gdb`) subcommands
+11. Profiling (part of `cog test`?) and debugging (`lldb` or `gdb`) subcommands
 12. Add more super cat powers...

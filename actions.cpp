@@ -45,7 +45,10 @@ void create_new_project(const std::string NAME) {
 				
 	files::mkdir(NAME);
 
-	files::fwrite(NAME + "/.gitignore", R"""(build)""");
+	files::fwrite(NAME + "/.gitignore",
+R"""(build
+test)"""
+	);
 
 	files::fwrite(NAME + "/project.cfg", format(
 R"""(# Project Details;
