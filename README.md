@@ -75,7 +75,7 @@ int add(int a, int b) {
 
 TEST(commutative_add, TASSERT(add(1,2) == add(2,1)));
 ```
-Note that when running `cog test`, all `std::cout` is captured; however, `std::err` works like usual. Additionally, `main()` is NOT called. `cog test` is still in development and has only ben tested with `which.cpp=g++`.
+Note that when running `cog test`, all `std::cout` is captured; however, `std::err` works like usual. Do not rely on global variables within tests. Additionally, `main()` is NOT called. `cog test` is still in development and has only ben tested with `which.cpp=g++`.
 
 Additionally, cog supports a subcommand for super cat powers.
 

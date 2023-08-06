@@ -189,6 +189,7 @@ namespace __Testing__ {
 }
 
 void __test__(int argc, char* argv[], char* env[]) {
+    std::ios_base::Init();
     std::cerr << "Testing..." << std::endl;
     std::vector<std::string> arguments(argv + 1, argv + argc);
     int passed = 0, skipped = 0;
