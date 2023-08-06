@@ -121,12 +121,15 @@ namespace __Testing__ {
 
     namespace {
         std::streambuf* stdcout = nullptr;
-        std::stringstream capture_stream = std::stringstream();
+        std::stringstream* get_capture_stream() {
+            static std::stringstream* p = new std::stringstream();
+            return p;
+        }
     }
 
     bool capture_output() {
         if(!stdcout) {
-            stdcout = std::cout.rdbuf(capture_stream.rdbuf());
+            stdcout = std::cout.rdbuf(get_capture_stream()->rdbuf());
             return true;
         }
         return false;
@@ -142,14 +145,14 @@ namespace __Testing__ {
     }
 
     std::string get_captured_output_for(Runner run) {
-        size_t i = capture_stream.tellp();
+        size_t i = get_capture_stream()->tellp();
         run();
-        std::string output = capture_stream.str().substr(i);
+        std::string output = get_capture_stream()->str().substr(i);
         return output;
     }
 
     std::string get_captured_output() {
-        return capture_stream.str();
+        return get_capture_stream()->str();
     }
 
     std::vector<Test>* get_tests() {
@@ -185,6 +188,11 @@ namespace __Testing__ {
         std::regex re(pattern);
         std::string output = get_captured_output_for(run);
         assert(std::regex_search(output, re), (std::string("Got output \"") + output + "\", but expected it to match /" + pattern + "/").c_str(), position);
+    }
+
+    void clean_up() {
+        delete get_tests();
+        delete get_capture_stream();
     }
 }
 
@@ -228,6 +236,7 @@ void __test__(int argc, char* argv[], char* env[]) {
     std::cerr << passed << " PASSED" << std::endl;
     int failed = __Testing__::get_tests()->size() - skipped - passed;
     std::cerr << failed << " FAILED!" << std::endl;
+    __Testing__::clean_up();
     exit(failed ? 1 : 0);
 }
 
