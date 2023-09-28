@@ -8,6 +8,7 @@ R"""(#ifndef __TESTING_CPP__
 #ifndef TEST
 #include <vector>
 #include <string>
+#include <chrono>
 #include <exception>
 
 namespace __Testing__ {
@@ -46,6 +47,8 @@ namespace __Testing__ {
 
     std::string get_captured_output();
 
+    double time(Runner run);
+
     std::vector<Test>* get_tests();
 
     int register_test(Test test);
@@ -78,6 +81,9 @@ namespace __Testing__ {
 #define TASSERT(x) __Testing__::assert(x, #x, __Testing__::Position {__LINE__, __FILE__})
 #define TPRINTS(BODY,TEXT) __Testing__::assert_output_equals([]()->void {BODY;}, TEXT, __Testing__::Position {__LINE__, __FILE__})
 #define TPRINTMATCHES(BODY,PATTERN) __Testing__::assert_output_matches([]()->void {BODY;}, PATTERN, __Testing__::Position {__LINE__, __FILE__})
+
+#define TIME(BODY) __Testing__::time([]()->void {BODY;})
+#define OUTPUT(BODY) __Testing::get_captured_output_for([]()->void {BODY;})
 
 void __test__(int argc, char* argv[], char* env[]);
 #endif
@@ -153,6 +159,14 @@ namespace __Testing__ {
 
     std::string get_captured_output() {
         return get_capture_stream()->str();
+    }
+
+    double time(Runner run) {
+        auto start = std::chrono::high_resolution_clock::now();
+        run();
+        auto stop = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = stop - start;
+        return elapsed.count();
     }
 
     std::vector<Test>* get_tests() {

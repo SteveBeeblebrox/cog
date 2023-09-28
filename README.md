@@ -98,3 +98,4 @@ Additionally, cog supports a subcommand for super cat powers.
 10. Detect and lock on dependency versions (Expanding `build/project.log`)
 11. Profiling (part of `cog test`?) and debugging (`lldb` or `gdb`) subcommands
 12. Add more super cat powers...
+<!--TODO, refactor output testing, document OUTPUT() and TIME(), update README to reflect these, TODO and DEPRECATED macros-->
